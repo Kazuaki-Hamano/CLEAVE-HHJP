@@ -6,6 +6,13 @@
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/bt.h>
+#include <dt-bindings/zmk/pointing.h>
+
+/* Language keys: tap for language selection, hold for Fn/Mouse. */
+&lt {
+	tapping-term-ms = <200>;
+	flavor = "tap-preferred";
+};
 
 / {
 	behaviors {
@@ -63,7 +70,7 @@
     &kp TAB  &kp Q    &kp W    &kp E    &kp R    &kp T                                         &kp Y    &kp U    &kp I    &kp O    &kp P    &kp LBKT &kp RBKT &kp RET
     &kp LCTRL &kp A   &kp S    &kp D    &kp F    &kp G                                         &kp H    &kp J    &kp K    &kp L    &kp SEMI &kp SQT  &kp BSLH
     &kp LSHFT &kp Z   &kp X    &kp C    &kp V    &kp B                                         &kp N    &kp M    &kp COMMA &kp DOT &kp FSLH &kp INT1 &kp UP  &kp RSHFT
-    &mo 1    &kp LGUI &kp LGUI &kp LALT &kp LANG2 &kp SPACE                                     &kp SPACE &kp LANG1 &kp LANG1 &kp RALT &mo 1   &kp LEFT &kp DOWN &kp RIGHT
+    &mo 1    &kp LGUI &kp LGUI &kp LALT &lt 1 LANG2 &kp SPACE                                   &kp SPACE &lt 2 LANG1 &kp LANG1 &kp RALT &mo 1   &kp LEFT &kp DOWN &kp RIGHT
 			>;
 		};
 
@@ -75,6 +82,17 @@
     &trans   &kp C_VOL_DN &kp C_VOL_UP &kp C_MUTE &kp C_EJECT &trans                          &kp STAR &kp FSLH &kp HOME &kp PG_UP &kp LEFT &kp RIGHT &trans
     &trans   &trans   &trans   &trans   &trans   &trans                                        &kp PLUS &kp MINUS &kp END &kp PG_DN &kp DOWN &trans   &trans   &trans
     &trans   &trans   &trans   &trans   &trans   &trans                                        &trans   &trans   &trans   &trans   &trans   &trans   &trans   &trans
+			>;
+		};
+
+		mouse_layer {
+			display-name = "Mouse";
+			bindings = <
+    &trans &trans &trans &trans &trans &trans &trans                                           &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &mkp LCLK &mmv MOVE_UP &mkp RCLK &msc SCRL_UP &trans                                &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &mmv MOVE_LEFT &mmv MOVE_DOWN &mmv MOVE_RIGHT &msc SCRL_DOWN &trans                  &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &mkp MCLK &trans &trans &trans                                               &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans                                                  &trans &trans &trans &trans &trans &trans &trans &trans
 			>;
 		};
 	};
