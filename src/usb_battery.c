@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT */
+#include <string.h>
 #include <zephyr/device.h>
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
@@ -96,9 +97,12 @@ ZMK_SUBSCRIPTION(cleave_usb_battery, zmk_split_peripheral_status_changed);
 static int set_report(const struct device *dev, struct usb_setup_packet *setup,
                       int32_t *len, uint8_t **data) {
     ARG_UNUSED(dev);
-    if (setup->wValue != 0x0304 || *len != 8 || (*data)[0] != 4 || (*data)[1] != 1 ||
+    if (setup->wValue != 0x0304 || (*len != 8 && *len != 32) || (*data)[0] != 4 || (*data)[1] != 1 ||
         (*data)[2] > 1 || memcmp(*data + 3, "BOOT", 4) != 0 || (*data)[7] != 0) {
         return -EINVAL;
+    }
+    for (int i = 8; i < *len; i++) {
+        if ((*data)[i] != 0) { return -EINVAL; }
     }
     return cleave_update_request((*data)[2]);
 }

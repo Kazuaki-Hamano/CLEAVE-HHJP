@@ -6,6 +6,7 @@ import sys
 import tkinter as tk
 import ctypes
 import queue
+import threading
 
 if not getattr(sys, 'frozen', False) and sys.prefix == sys.base_prefix:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'output/battery/python-packages'))
@@ -31,12 +32,12 @@ def read():
     device = hid.device()
     try:
         device.open_path(candidates[0]['path'])
-        state = decode(device.get_feature_report(1, 7))
+        state = decode(device.get_feature_report(1, 32)[:7])
         state.update(left_power=None, right_power=None, right_power_age_seconds=None)
         try:
-            # Windows uses the collection's largest FeatureReportByteLength (7).
+            # Windows uses the collection's largest FeatureReportByteLength (32).
             # Report 2 has six meaningful bytes; ignore any trailing padding.
-            state.update(decode_power(device.get_feature_report(2, 7)[:6]))
+            state.update(decode_power(device.get_feature_report(2, 32)[:6]))
         except (OSError, ValueError):
             # Old firmware exposes only report 1; retain its battery values.
             pass
@@ -131,17 +132,27 @@ def main():
     tk.Label(window, textvariable=detail, wraplength=350).pack()
     commands = queue.Queue()
     current_state = {}
+    updating = {'busy': False}
+    updater_window = {'window': None}
     icon = pystray.Icon('CLEAVE Battery', picture(), 'CLEAVE：接続を確認しています…',
         menu=pystray.Menu(
             pystray.MenuItem('残量ウィンドウを開く', lambda: commands.put('show'), default=True),
+            pystray.MenuItem('ファームウェア更新', lambda: commands.put('firmware')),
             pystray.MenuItem('終了', lambda: commands.put('quit'))))
 
     def handle_commands():
         while not commands.empty():
             command = commands.get_nowait()
             if command == 'quit':
+                if updating['busy']:
+                    from tkinter import messagebox
+                    messagebox.showinfo('更新中', '更新処理が終わってから終了してください')
+                    continue
                 window.destroy()
                 return
+            if command == 'firmware':
+                open_updater()
+                continue
             window.deiconify()
             window.lift()
             window.focus_force()
@@ -154,6 +165,10 @@ def main():
         window.after(100, handle_commands)
 
     def update():
+        if updating['busy']:
+            icon.title = 'CLEAVE：ファームウェア更新中'
+            window.after(5000, update)
+            return
         try:
             state = read()
             current_state.clear()
@@ -173,6 +188,91 @@ def main():
             icon.title = 'CLEAVE：未接続／残量を取得できません'
             icon.icon = picture()
         window.after(5000, update)
+
+    def open_updater():
+        from tkinter import ttk, filedialog, messagebox
+        import firmware_update as updater
+        previous = updater_window['window']
+        if previous is not None and previous.winfo_exists():
+            previous.deiconify()
+            previous.lift()
+            return
+        dialog = tk.Toplevel(window)
+        updater_window['window'] = dialog
+        dialog.title('CLEAVE ファームウェア更新')
+        dialog.geometry('610x370')
+        dialog.resizable(False, False)
+        frame = ttk.Frame(dialog, padding=18)
+        frame.pack(fill='both', expand=True)
+        ttk.Label(frame, text='更新する側と、その側のUF2を選択してください。').pack(anchor='w')
+        side = tk.StringVar(value='右（子機）')
+        chooser = ttk.Combobox(frame, textvariable=side, values=('右（子機）', '左（親機）'), state='readonly', width=18)
+        chooser.pack(anchor='w', pady=10)
+        file_path = tk.StringVar()
+        row = ttk.Frame(frame)
+        row.pack(fill='x')
+        entry = ttk.Entry(row, textvariable=file_path, width=54)
+        entry.pack(side='left', fill='x', expand=True)
+        def browse():
+            path = filedialog.askopenfilename(parent=dialog, title='更新するUF2を選択',
+                filetypes=[('UF2 firmware', '*.uf2')])
+            if path:
+                file_path.set(path)
+        browse_button = ttk.Button(row, text='選択…', command=browse)
+        browse_button.pack(side='left', padx=(8, 0))
+        manual = tk.BooleanVar(value=True)
+        try:
+            updater.read_info(0)
+            manual.set(False)
+        except (OSError, RuntimeError, ValueError):
+            pass
+        mode = ttk.Checkbutton(frame, variable=manual,
+            text='キー操作で更新モードへ入れる（初回導入／USBケーブル1本）')
+        mode.pack(anchor='w', pady=(16, 8))
+        ttk.Label(frame, wraplength=570,
+            text='自動モード：親機はUSB接続を維持し、右の更新時は右にもUSBデータケーブルを接続します。\nキー操作モード：開始後、対象をUSB接続してFn＋B／Nを2秒長押しします。').pack(anchor='w')
+        status = tk.StringVar(value='UF2の左右・形式を確認してから送信します。')
+        ttk.Label(frame, textvariable=status, wraplength=565).pack(anchor='w', pady=18)
+        events = queue.Queue()
+
+        def worker(firmware, use_manual):
+            try:
+                result = updater.perform_update(firmware, use_manual, lambda text: events.put(('progress', text)))
+                events.put(('done', result['message']))
+            except Exception as error:
+                events.put(('error', str(error)))
+
+        def start():
+            selected_side = 1 if side.get().startswith('右') else 0
+            try:
+                firmware = updater.validate_firmware(file_path.get(), selected_side)
+            except (OSError, ValueError) as error:
+                messagebox.showerror('UF2を確認してください', str(error), parent=dialog)
+                return
+            updating['busy'] = True
+            for control in (chooser, entry, browse_button, mode, start_button):
+                control.configure(state='disabled')
+            status.set('更新を開始します…')
+            threading.Thread(target=worker, args=(firmware, manual.get()), daemon=False).start()
+
+        start_button = ttk.Button(frame, text='更新開始', command=start)
+        start_button.pack(anchor='e')
+
+        def refresh():
+            while not events.empty():
+                kind, text = events.get_nowait()
+                status.set(text)
+                if kind != 'progress':
+                    updating['busy'] = False
+                    chooser.configure(state='readonly')
+                    for control in (entry, browse_button, mode, start_button):
+                        control.configure(state='normal')
+                    if kind == 'error':
+                        messagebox.showerror('更新を確認してください', text, parent=dialog)
+            if dialog.winfo_exists():
+                dialog.after(100, refresh)
+        dialog.protocol('WM_DELETE_WINDOW', lambda: None if updating['busy'] else dialog.destroy())
+        dialog.after(100, refresh)
 
     try:
         icon.run_detached()

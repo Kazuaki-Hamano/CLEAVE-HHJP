@@ -49,7 +49,7 @@ class ChargingReportTests(unittest.TestCase):
             def open_path(self, path): pass
             def close(self): pass
             def get_feature_report(self, report_id, size):
-                if size != 7:
+                if size != 32:
                     raise OSError('Feature buffer too small')
                 return [1, 1, 71, 55, 1, 10, 0] if report_id == 1 else [2, 1, 3, 2, 5, 0, 0]
         with patch.object(monitor.hid, 'enumerate', return_value=[

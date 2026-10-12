@@ -38,7 +38,8 @@ static ssize_t info_read(struct bt_conn *conn, const struct bt_gatt_attr *attr,
                          void *buf, uint16_t len, uint16_t offset) {
     uint8_t value[CLEAVE_UPDATE_INFO_SIZE];
     cleave_update_local_info(value);
-    return bt_gatt_attr_read(conn, attr, buf, len, offset, value, sizeof(value));
+    /* Fits even the default ATT MTU (23), without negotiating a larger MTU. */
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, value, 16);
 }
 BT_GATT_SERVICE_DEFINE(cleave_update_info_service,
     BT_GATT_PRIMARY_SERVICE(BT_UUID_DECLARE_128(
@@ -52,7 +53,7 @@ static uint8_t remote_info[CLEAVE_UPDATE_INFO_SIZE];
 static int64_t remote_updated;
 static atomic_t pending;
 static struct bt_gatt_read_params read_params;
-static uint8_t read_buffer[CLEAVE_UPDATE_INFO_SIZE];
+static uint8_t read_buffer[16];
 static size_t read_size;
 
 void cleave_update_remote_info(uint8_t *out) {
@@ -81,7 +82,8 @@ static uint8_t info_done(struct bt_conn *conn, uint8_t err,
             memcmp(read_buffer + 12, "CHHP", 4) == 0 &&
             bt_conn_get_info(conn, &info) == 0 && info.state == BT_CONN_STATE_CONNECTED) {
             k_spinlock_key_t key = k_spin_lock(&info_lock);
-            memcpy(remote_info, read_buffer, sizeof(remote_info));
+            memset(remote_info, 0, sizeof(remote_info));
+            memcpy(remote_info, read_buffer, sizeof(read_buffer));
             remote_updated = k_uptime_get();
             k_spin_unlock(&info_lock, key);
         }
