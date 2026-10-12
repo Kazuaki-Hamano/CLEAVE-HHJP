@@ -45,6 +45,45 @@ Seven bytes: ID, protocol version (1), left %, right %, right-valid (0/1),
 right notification age in seconds (uint16 little endian, saturates at 65535).
 This implementation supports one central with one BLE peripheral.
 
+## Firmware updater
+
+Right-click the tray icon and select **ファームウェア更新**. Choose left/right
+and the matching UF2, then click **更新開始**. The app validates UF2 structure,
+nRF52840 family, application address range, complete block ordering and the
+embedded CLEAVE left/right identity. Generic, settings-reset, bootloader, and
+older unmarked images are rejected. The validated bytes are held in memory.
+
+Initial installation: choose the new `CLEAVE-right-appupdate.uf2`, leave
+**キー操作で更新モードへ入れる** checked, click Start, then connect the right
+half to USB and hold Fn+N for two seconds. The app detects and copies to the
+new UF2 drive. Then repeat for `CLEAVE-left-appupdate.uf2` with Fn+B.
+Before clicking Start, both halves must be in normal mode (no UF2 drive).
+When the old parent cannot query the newly installed right firmware, the first
+right update remains verification-pending. Install/reconnect the parent and
+confirm that both builds are readable.
+
+After installation, automatic mode sends an explicit USB feature command to
+the parent. Left boots locally; right boots using the existing encrypted split
+behavior command. Keep the parent USB connected, and connect the right half
+with another USB data cable when updating the right. Wait several seconds for
+the right USB state to be reported. With one cable, use key-operation mode.
+
+The app requires exactly one newly appeared XIAO UF2 drive and rechecks its
+volume identity before copying. After the drive disappears, it compares the
+running target's reported build with the chosen UF2 and checks the parent chip
+identity when available. File copying alone is never reported as verified
+success. The updater window and app cannot be closed normally during a write.
+Connect/disconnect or recovery failures remain visible as errors or pending
+verification. The physical reset button and Fn bootloader keys remain usable.
+
+Feature 3 returns parent info, Feature 5 returns cached child info (32 bytes):
+ID, version (1), side (0 left / 1 right), flags (bit 0 update support, bit 1 USB
+power), ASCII build ID (8 bytes), `CHHP`, chip ID (8 bytes, parent only), reserved.
+Feature 4 accepts ID=4, version=1, target side, `BOOT`, zero padding. The USB
+collection maximum feature length is 32; Windows padding is accepted only when
+zero. The parent delays the boot action 250 ms to finish the control transfer.
+The child info GATT characteristic returns 16 bytes to fit the default ATT MTU.
+
 ## Charging status
 
 Flash **both left and right** charging-enabled UF2 files. The app keeps reading

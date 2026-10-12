@@ -71,6 +71,7 @@ def main():
     parser.add_argument('--once', action='store_true')
     parser.add_argument('--output', type=Path)
     parser.add_argument('--window', action='store_true')
+    parser.add_argument('--update', action='store_true', help='Open firmware update window')
     parser.add_argument('--status-file', type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.once:
@@ -131,6 +132,8 @@ def main():
     tk.Label(window, textvariable=levels, font=('Yu Gothic UI', 18)).pack(pady=(22, 8))
     tk.Label(window, textvariable=detail, wraplength=350).pack()
     commands = queue.Queue()
+    if args.update:
+        commands.put('firmware')
     current_state = {}
     updating = {'busy': False}
     updater_window = {'window': None}

@@ -179,7 +179,12 @@ def perform_update(firmware, manual, progress, scan=scan_boot_drives,
     if baseline:
         raise RuntimeError('既にUF2ドライブがあります。通常動作へ戻してから開始してください')
     old_info = None
+    parent_supported = True
     if manual:
+        try:
+            info(0)
+        except (OSError, RuntimeError, ValueError):
+            parent_supported = False
         progress('対象をUSB接続し、Fn＋B（左）／Fn＋N（右）を2秒長押ししてください')
     else:
         progress('更新モードへ移行しています…')
@@ -197,6 +202,9 @@ def perform_update(firmware, manual, progress, scan=scan_boot_drives,
     end = time.monotonic() + verify_timeout
     while time.monotonic() < end:
         if drive not in scan():
+            if manual and firmware.side == 1 and not parent_supported:
+                return {'verified': False, 'build': firmware.build,
+                        'message': 'UF2ドライブが消えました。続けて左側も更新し、親機の更新後に右側のバージョンを確認してください'}
             try:
                 current = info(firmware.side)
                 same_device = not old_info or old_info['uid'] == '0000000000000000' or current['uid'] == old_info['uid']
