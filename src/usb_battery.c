@@ -9,6 +9,7 @@
 #include <zmk/events/battery_state_changed.h>
 #include <zmk/events/split_peripheral_status_changed.h>
 #include "charge_status.h"
+#include "app_update.h"
 
 /* Vendor collection: read-only feature report, independent of keyboard/mouse HID.
  * ID, version, central %, peripheral %, peripheral-valid, age in seconds (LE).
@@ -19,7 +20,10 @@ static const uint8_t descriptor[] = {
     0x09, 0x02, 0x15, 0x00, 0x26, 0xff, 0x00,
     0x75, 0x08, 0x95, 0x06, 0xb1, 0x02,
     /* Feature report 2: version, local state, peer state, peer age (LE). */
-    0x85, 0x02, 0x09, 0x03, 0x95, 0x05, 0xb1, 0x02, 0xc0,
+    0x85, 0x02, 0x09, 0x03, 0x95, 0x05, 0xb1, 0x02,
+    0x85, 0x03, 0x09, 0x04, 0x95, 0x1f, 0xb1, 0x02,
+    0x85, 0x04, 0x09, 0x05, 0x95, 0x07, 0xb1, 0x02,
+    0x85, 0x05, 0x09, 0x06, 0x95, 0x1f, 0xb1, 0x02, 0xc0,
 };
 static struct k_spinlock state_lock;
 static uint8_t right_level;
@@ -27,10 +31,18 @@ static bool right_valid;
 static int64_t right_updated;
 static uint8_t report[7];
 static uint8_t power_report[6];
+static uint8_t update_report[CLEAVE_UPDATE_INFO_SIZE];
 
 static int get_report(const struct device *dev, struct usb_setup_packet *setup,
                       int32_t *len, uint8_t **data) {
     ARG_UNUSED(dev);
+    if (setup->wValue == 0x0303 || setup->wValue == 0x0305) {
+        if (setup->wValue == 0x0303) { cleave_update_local_info(update_report); }
+        else { cleave_update_remote_info(update_report); }
+        *data = update_report;
+        *len = sizeof(update_report);
+        return 0;
+    }
     if (setup->wValue == 0x0302) {
         uint16_t power_age;
         power_report[0] = 2;
@@ -81,7 +93,16 @@ ZMK_LISTENER(cleave_usb_battery, battery_listener);
 ZMK_SUBSCRIPTION(cleave_usb_battery, zmk_peripheral_battery_state_changed);
 ZMK_SUBSCRIPTION(cleave_usb_battery, zmk_split_peripheral_status_changed);
 
-static const struct hid_ops ops = {.get_report = get_report};
+static int set_report(const struct device *dev, struct usb_setup_packet *setup,
+                      int32_t *len, uint8_t **data) {
+    ARG_UNUSED(dev);
+    if (setup->wValue != 0x0304 || *len != 8 || (*data)[0] != 4 || (*data)[1] != 1 ||
+        (*data)[2] > 1 || memcmp(*data + 3, "BOOT", 4) != 0 || (*data)[7] != 0) {
+        return -EINVAL;
+    }
+    return cleave_update_request((*data)[2]);
+}
+static const struct hid_ops ops = {.get_report = get_report, .set_report = set_report};
 static int battery_usb_init(void) {
     const struct device *dev = device_get_binding("HID_1");
     if (!dev || !device_is_ready(dev)) {
