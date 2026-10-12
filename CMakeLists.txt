@@ -1,3 +1,7 @@
 if(CONFIG_ZMK_POINTING)
   target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/mouse_speed.c)
 endif()
+
+if(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING AND CONFIG_USB_HID_DEVICE_COUNT GREATER 1)
+  target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/usb_battery.c)
+endif()
