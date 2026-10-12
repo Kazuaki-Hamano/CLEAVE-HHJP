@@ -7,6 +7,7 @@ import tkinter as tk
 import ctypes
 import queue
 import threading
+import time
 
 if not getattr(sys, 'frozen', False) and sys.prefix == sys.base_prefix:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'output/battery/python-packages'))
@@ -137,6 +138,7 @@ def main():
     current_state = {}
     updating = {'busy': False}
     updater_window = {'window': None}
+    pending_updates = {}
     icon = pystray.Icon('CLEAVE Battery', picture(), 'CLEAVE：接続を確認しています…',
         menu=pystray.Menu(
             pystray.MenuItem('残量ウィンドウを開く', lambda: commands.put('show'), default=True),
@@ -212,12 +214,14 @@ def main():
         chooser = ttk.Combobox(frame, textvariable=side, values=('右（子機）', '左（親機）'), state='readonly', width=18)
         chooser.pack(anchor='w', pady=10)
         file_path = tk.StringVar()
+        firmware_folder = Path(sys.executable).parent.parent if getattr(sys, 'frozen', False) else Path.cwd() / 'output/battery'
         row = ttk.Frame(frame)
         row.pack(fill='x')
         entry = ttk.Entry(row, textvariable=file_path, width=54)
         entry.pack(side='left', fill='x', expand=True)
         def browse():
             path = filedialog.askopenfilename(parent=dialog, title='更新するUF2を選択',
+                initialdir=str(firmware_folder),
                 filetypes=[('UF2 firmware', '*.uf2')])
             if path:
                 file_path.set(path)
@@ -241,6 +245,25 @@ def main():
         def worker(firmware, use_manual):
             try:
                 result = updater.perform_update(firmware, use_manual, lambda text: events.put(('progress', text)))
+                if not result['verified']:
+                    pending_updates[firmware.side] = firmware.build
+                else:
+                    pending_updates.pop(firmware.side, None)
+                    if firmware.side == 0 and 1 in pending_updates:
+                        events.put(('progress', '親機が起動しました。先に更新した右側も確認しています…'))
+                        deadline = time.monotonic() + 30
+                        while time.monotonic() < deadline:
+                            try:
+                                peer = updater.read_info(1)
+                                if peer['build'] == pending_updates[1]:
+                                    pending_updates.pop(1)
+                                    result['message'] += '。先に更新した右側のバージョンも一致しました'
+                                    break
+                            except (OSError, RuntimeError, ValueError):
+                                pass
+                            time.sleep(0.5)
+                        if 1 in pending_updates:
+                            result['message'] += '。右側の確認は未完了です'
                 events.put(('done', result['message']))
             except Exception as error:
                 events.put(('error', str(error)))
