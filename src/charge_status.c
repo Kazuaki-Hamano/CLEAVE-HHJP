@@ -81,7 +81,7 @@ static uint8_t charge_read_done(struct bt_conn *conn, uint8_t err,
     ARG_UNUSED(params);
     struct bt_conn_info info;
     if (!err && data && length == 1 &&
-        bt_conn_get_info(conn, &info) == 0 && info.state == BT_CONN_CONNECTED &&
+        bt_conn_get_info(conn, &info) == 0 && info.state == BT_CONN_STATE_CONNECTED &&
         ((const uint8_t *)data)[0] <= CLEAVE_POWER_CHARGING) {
         k_spinlock_key_t key = k_spin_lock(&remote_lock);
         remote_state = ((const uint8_t *)data)[0];
@@ -96,7 +96,7 @@ static void read_peer(struct bt_conn *conn, void *user_data) {
     ARG_UNUSED(user_data);
     struct bt_conn_info info;
     if (bt_conn_get_info(conn, &info) != 0 || info.role != BT_CONN_ROLE_CENTRAL ||
-        info.state != BT_CONN_CONNECTED || !atomic_cas(&read_pending, 0, 1)) {
+        info.state != BT_CONN_STATE_CONNECTED || !atomic_cas(&read_pending, 0, 1)) {
         return;
     }
     read_params = (struct bt_gatt_read_params){

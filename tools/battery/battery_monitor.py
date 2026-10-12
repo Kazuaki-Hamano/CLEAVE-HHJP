@@ -31,9 +31,36 @@ def read():
     device = hid.device()
     try:
         device.open_path(candidates[0]['path'])
-        return decode(device.get_feature_report(1, 7))
+        state = decode(device.get_feature_report(1, 7))
+        state.update(left_power=None, right_power=None, right_power_age_seconds=None)
+        try:
+            state.update(decode_power(device.get_feature_report(2, 6)))
+        except (OSError, ValueError):
+            # Old firmware exposes only report 1; retain its battery values.
+            pass
+        return state
     finally:
         device.close()
+
+
+def decode_power(data):
+    if len(data) != 6 or data[:2] != [2, 1] or data[2] > 3 or data[3] > 3:
+        raise ValueError('Unexpected charging report')
+    names = (None, 'battery', 'usb_idle', 'charging')
+    return {'left_power': names[data[2]], 'right_power': names[data[3]],
+            'right_power_age_seconds': (data[4] | data[5] << 8) if data[3] else None}
+
+
+def side_label(side, level, power):
+    percent = '未取得' if level is None else f'{level}%'
+    suffix = {None: '充電不明', 'battery': 'バッテリー',
+              'usb_idle': 'USB給電', 'charging': '充電中'}[power]
+    return f'{side} {percent}（{suffix}）'
+
+
+def tooltip(state):
+    return 'CLEAVE：' + side_label('左', state['left'], state.get('left_power')) + ' ／ ' + \
+        side_label('右', state['right'], state.get('right_power'))
 
 
 def main():
@@ -72,10 +99,10 @@ def main():
         kernel.CloseHandle(mutex)
         return 0
 
-    def picture(left=None, right=None):
+    def picture(left=None, right=None, left_power=None, right_power=None):
         image = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
-        for x, level in ((5, left), (35, right)):
+        for x, level, power in ((5, left, left_power), (35, right, right_power)):
             draw.rounded_rectangle((x, 10, x + 23, 57), radius=4, fill='#253341', outline='white', width=2)
             draw.rectangle((x + 7, 5, x + 16, 10), fill='white')
             if level is not None:
@@ -85,17 +112,20 @@ def main():
             else:
                 draw.line((x + 5, 28, x + 18, 41), fill='#aaaaaa', width=3)
                 draw.line((x + 18, 28, x + 5, 41), fill='#aaaaaa', width=3)
+            if power == 'charging':
+                draw.polygon([(x+13, 19), (x+6, 34), (x+12, 34),
+                              (x+9, 47), (x+19, 29), (x+13, 29)], fill='#ffff66')
         return image
 
     window = tk.Tk()
     window.title('CLEAVE バッテリー')
-    window.geometry('380x160')
+    window.geometry('430x220')
     if not args.window:
         window.withdraw()
     window.protocol('WM_DELETE_WINDOW', window.withdraw)
     levels = tk.StringVar(value='接続を確認しています…')
     detail = tk.StringVar()
-    tk.Label(window, textvariable=levels, font=('Yu Gothic UI', 22)).pack(pady=(22, 8))
+    tk.Label(window, textvariable=levels, font=('Yu Gothic UI', 18)).pack(pady=(22, 8))
     tk.Label(window, textvariable=detail, wraplength=350).pack()
     commands = queue.Queue()
     current_state = {}
@@ -126,13 +156,13 @@ def main():
             state = read()
             current_state.clear()
             current_state.update(state)
-            right = '未取得' if state['right'] is None else str(state['right']) + '%'
-            levels.set(f"左 {state['left']}%　右 {right}")
+            levels.set(side_label('左', state['left'], state['left_power']) + '\n' +
+                       side_label('右', state['right'], state['right_power']))
             age = state['right_age_seconds']
-            icon.title = f"CLEAVE：左 {state['left']}% ／ 右 {right}"
-            icon.icon = picture(state['left'], state['right'])
+            icon.title = tooltip(state)
+            icon.icon = picture(state['left'], state['right'], state['left_power'], state['right_power'])
             detail.set('右側の接続・通知を待っています' if age is None else
-                       f'右側の値は {age} 秒前に受信（古い値の場合は右側を起こしてください）')
+                       f'右側の残量は {age} 秒前に通知されました')
         except Exception as error:
             current_state.clear()
             current_state['error'] = str(error)

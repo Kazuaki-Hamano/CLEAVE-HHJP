@@ -44,3 +44,22 @@ Protocol: vendor usage page `0xff60`, usage `1`, Feature report ID `1`.
 Seven bytes: ID, protocol version (1), left %, right %, right-valid (0/1),
 right notification age in seconds (uint16 little endian, saturates at 65535).
 This implementation supports one central with one BLE peripheral.
+
+## Charging status
+
+Flash **both left and right** charging-enabled UF2 files. The app keeps reading
+battery levels from old firmware but displays **充電不明** for unsupported sides.
+Feature report 2 has six bytes: ID (2), version (1), left power state,
+right power state, right-state age in seconds (uint16 little endian).
+States: 0 unknown, 1 battery, 2 USB powered without an active charging signal,
+3 charging. USB powered does not establish that the battery is full.
+XIAO P0.17 is input-only, active-low CHG. nRF52840 VBUS detection also works
+with a wall charger. A pull-up is enabled only while USB power is present.
+The central polls an encrypted read-only custom GATT characteristic over the
+existing split link every five seconds. Right charging state becomes unknown
+on disconnect or when it has not been successfully read for over 20 seconds.
+
+Acceptance: compare both charging indicators with the board charge LEDs;
+connect/disconnect each USB cable, confirm the corresponding state changes,
+then verify typing, mouse and Studio. Full-charge classification is not inferred
+from percentages or a deasserted CHG signal. No charging-current settings change.
