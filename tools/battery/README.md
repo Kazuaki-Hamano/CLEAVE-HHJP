@@ -1,5 +1,23 @@
 # CLEAVE USB battery display
 
+## Windows EXE / notification area
+
+Run `output/battery/dist/CLEAVE-Battery.exe`. Python is bundled and is not
+required on the destination PC. The app starts in the notification area beside
+the clock. Hover over the two-battery icon to see left/right percentages.
+The icon may initially be in Windows' hidden-icons overflow.
+Right-click for **残量ウィンドウを開く** or **終了**. Closing the window keeps
+the app running. Only one instance can run. Readings refresh every five seconds.
+The detail window shows the age of the last peripheral notification. An
+unchanged battery level may not generate a new notification.
+Windows login autostart is not installed automatically.
+
+To rebuild, run `powershell -ExecutionPolicy Bypass -File tools/battery/build-exe.ps1`.
+This creates an isolated build environment under `output/battery/build-env`.
+The EXE can also run with `--once --output <JSON path>` for USB diagnostics.
+
+## Firmware / source usage
+
 The left/central half reports its own charge and the right/peripheral charge
 over a separate read-only USB HID interface. Keyboard, mouse and Studio remain
 on their existing interfaces. No PC Bluetooth connection is required.

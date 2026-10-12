@@ -4,8 +4,11 @@ import json
 from pathlib import Path
 import sys
 import tkinter as tk
+import ctypes
+import queue
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'output/battery/python-packages'))
+if not getattr(sys, 'frozen', False) and sys.prefix == sys.base_prefix:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'output/battery/python-packages'))
 import hid
 
 
@@ -36,37 +39,117 @@ def read():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--once', action='store_true')
+    parser.add_argument('--output', type=Path)
+    parser.add_argument('--window', action='store_true')
+    parser.add_argument('--status-file', type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.once:
         try:
-            print(json.dumps(read(), ensure_ascii=False))
+            result = read()
+            code = 0
         except Exception as error:
-            print(json.dumps({'error': str(error)}, ensure_ascii=False))
-            return 1
+            result = {'error': str(error)}
+            code = 1
+        text = json.dumps(result, ensure_ascii=False)
+        if args.output:
+            args.output.write_text(text, encoding='utf-8')
+        elif sys.stdout:
+            print(text)
+        return code
+
+    import pystray
+    from PIL import Image, ImageDraw
+
+    # Hold a named mutex for the lifetime of the app to prevent duplicate icons.
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.CreateMutexW.argtypes = (ctypes.c_void_p, ctypes.c_bool, ctypes.c_wchar_p)
+    kernel.CreateMutexW.restype = ctypes.c_void_p
+    kernel.CloseHandle.argtypes = (ctypes.c_void_p,)
+    mutex = kernel.CreateMutexW(None, False, 'Local\\CLEAVE_Battery_Monitor')
+    if not mutex:
+        raise ctypes.WinError(ctypes.get_last_error())
+    if ctypes.get_last_error() == 183:
+        kernel.CloseHandle(mutex)
         return 0
+
+    def picture(left=None, right=None):
+        image = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        for x, level in ((5, left), (35, right)):
+            draw.rounded_rectangle((x, 10, x + 23, 57), radius=4, fill='#253341', outline='white', width=2)
+            draw.rectangle((x + 7, 5, x + 16, 10), fill='white')
+            if level is not None:
+                height = max(1, round(39 * level / 100))
+                color = '#ff6655' if level <= 20 else '#55d6a0'
+                draw.rectangle((x + 4, 53 - height, x + 19, 53), fill=color)
+            else:
+                draw.line((x + 5, 28, x + 18, 41), fill='#aaaaaa', width=3)
+                draw.line((x + 18, 28, x + 5, 41), fill='#aaaaaa', width=3)
+        return image
+
     window = tk.Tk()
     window.title('CLEAVE バッテリー')
     window.geometry('380x160')
+    if not args.window:
+        window.withdraw()
+    window.protocol('WM_DELETE_WINDOW', window.withdraw)
     levels = tk.StringVar(value='接続を確認しています…')
     detail = tk.StringVar()
     tk.Label(window, textvariable=levels, font=('Yu Gothic UI', 22)).pack(pady=(22, 8))
     tk.Label(window, textvariable=detail, wraplength=350).pack()
+    commands = queue.Queue()
+    current_state = {}
+    icon = pystray.Icon('CLEAVE Battery', picture(), 'CLEAVE：接続を確認しています…',
+        menu=pystray.Menu(
+            pystray.MenuItem('残量ウィンドウを開く', lambda: commands.put('show'), default=True),
+            pystray.MenuItem('終了', lambda: commands.put('quit'))))
+
+    def handle_commands():
+        while not commands.empty():
+            command = commands.get_nowait()
+            if command == 'quit':
+                window.destroy()
+                return
+            window.deiconify()
+            window.lift()
+            window.focus_force()
+        if args.status_file:
+            args.status_file.write_text(json.dumps({
+                'tooltip': icon.title, 'tray_visible': icon.visible,
+                'window_hidden': window.state() == 'withdrawn',
+                'battery': current_state,
+            }, ensure_ascii=False), encoding='utf-8')
+        window.after(100, handle_commands)
 
     def update():
         try:
             state = read()
+            current_state.clear()
+            current_state.update(state)
             right = '未取得' if state['right'] is None else str(state['right']) + '%'
             levels.set(f"左 {state['left']}%　右 {right}")
             age = state['right_age_seconds']
+            icon.title = f"CLEAVE：左 {state['left']}% ／ 右 {right}"
+            icon.icon = picture(state['left'], state['right'])
             detail.set('右側の接続・通知を待っています' if age is None else
                        f'右側の値は {age} 秒前に受信（古い値の場合は右側を起こしてください）')
         except Exception as error:
+            current_state.clear()
+            current_state['error'] = str(error)
             levels.set('残量を取得できません')
             detail.set(str(error))
+            icon.title = 'CLEAVE：未接続／残量を取得できません'
+            icon.icon = picture()
         window.after(5000, update)
 
-    window.after(0, update)
-    window.mainloop()
+    try:
+        icon.run_detached()
+        window.after(0, update)
+        window.after(100, handle_commands)
+        window.mainloop()
+    finally:
+        icon.stop()
+        kernel.CloseHandle(mutex)
     return 0
 
 
