@@ -8,6 +8,7 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/battery_state_changed.h>
 #include <zmk/events/split_peripheral_status_changed.h>
+#include "charge_status.h"
 
 /* Vendor collection: read-only feature report, independent of keyboard/mouse HID.
  * ID, version, central %, peripheral %, peripheral-valid, age in seconds (LE).
@@ -16,17 +17,32 @@
 static const uint8_t descriptor[] = {
     0x06, 0x60, 0xff, 0x09, 0x01, 0xa1, 0x01, 0x85, 0x01,
     0x09, 0x02, 0x15, 0x00, 0x26, 0xff, 0x00,
-    0x75, 0x08, 0x95, 0x06, 0xb1, 0x02, 0xc0,
+    0x75, 0x08, 0x95, 0x06, 0xb1, 0x02,
+    /* Feature report 2: version, local state, peer state, peer age (LE). */
+    0x85, 0x02, 0x09, 0x03, 0x95, 0x05, 0xb1, 0x02, 0xc0,
 };
 static struct k_spinlock state_lock;
 static uint8_t right_level;
 static bool right_valid;
 static int64_t right_updated;
 static uint8_t report[7];
+static uint8_t power_report[6];
 
 static int get_report(const struct device *dev, struct usb_setup_packet *setup,
                       int32_t *len, uint8_t **data) {
     ARG_UNUSED(dev);
+    if (setup->wValue == 0x0302) {
+        uint16_t power_age;
+        power_report[0] = 2;
+        power_report[1] = 1;
+        power_report[2] = cleave_local_power_state();
+        power_report[3] = cleave_remote_power_state(&power_age);
+        power_report[4] = power_age & 0xff;
+        power_report[5] = power_age >> 8;
+        *data = power_report;
+        *len = sizeof(power_report);
+        return 0;
+    }
     if (setup->wValue != 0x0301) {
         return -ENOTSUP;
     }
