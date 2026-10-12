@@ -44,6 +44,21 @@ class ChargingReportTests(unittest.TestCase):
         self.assertIn('右 0%（USB給電）', text)
         self.assertNotIn('満充電', text)
 
+    def test_windows_feature_report_padding(self):
+        class Device:
+            def open_path(self, path): pass
+            def close(self): pass
+            def get_feature_report(self, report_id, size):
+                if size != 7:
+                    raise OSError('Feature buffer too small')
+                return [1, 1, 71, 55, 1, 10, 0] if report_id == 1 else [2, 1, 3, 2, 5, 0, 0]
+        with patch.object(monitor.hid, 'enumerate', return_value=[
+            {'usage_page': 0xff60, 'usage': 1, 'path': b'keyboard'}]), \
+             patch.object(monitor.hid, 'device', return_value=Device()):
+            state = monitor.read()
+        self.assertEqual(state['left_power'], 'charging')
+        self.assertEqual(state['right_power'], 'usb_idle')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -34,7 +34,9 @@ def read():
         state = decode(device.get_feature_report(1, 7))
         state.update(left_power=None, right_power=None, right_power_age_seconds=None)
         try:
-            state.update(decode_power(device.get_feature_report(2, 6)))
+            # Windows uses the collection's largest FeatureReportByteLength (7).
+            # Report 2 has six meaningful bytes; ignore any trailing padding.
+            state.update(decode_power(device.get_feature_report(2, 7)[:6]))
         except (OSError, ValueError):
             # Old firmware exposes only report 1; retain its battery values.
             pass
