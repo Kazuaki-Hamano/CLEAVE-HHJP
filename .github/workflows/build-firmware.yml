@@ -5,11 +5,17 @@ on:
       - main
     paths:
       - 'config/**'
+      - 'src/**'
+      - 'tools/battery/**'
+      - 'CMakeLists.txt'
       - 'build.yaml'
       - '.github/workflows/build-firmware.yml'
   pull_request:
     paths:
       - 'config/**'
+      - 'src/**'
+      - 'tools/battery/**'
+      - 'CMakeLists.txt'
       - 'build.yaml'
       - '.github/workflows/build-firmware.yml'
 
