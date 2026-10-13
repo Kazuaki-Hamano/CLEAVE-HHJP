@@ -6,7 +6,7 @@ Run `output/battery/dist/CLEAVE-Battery.exe`. Python is bundled and is not
 required on the destination PC. The app starts in the notification area beside
 the clock. Hover over the two-battery icon to see left/right percentages.
 The icon may initially be in Windows' hidden-icons overflow.
-Right-click for **残量ウィンドウを開く** or **終了**. Closing the window keeps
+Right-click for **残量ウィンドウを開く**, **ファームウェア更新**, or **終了**. Closing the window keeps
 the app running. Only one instance can run. Readings refresh every five seconds.
 The detail window shows the age of the last peripheral notification. An
 unchanged battery level may not generate a new notification.
@@ -19,7 +19,9 @@ The EXE can also run with `--once --output <JSON path>` for USB diagnostics.
 ## Firmware / source usage
 
 The left/central half reports its own charge and the right/peripheral charge
-over a separate read-only USB HID interface. Keyboard, mouse and Studio remain
+over a separate vendor USB HID interface. Status reports are read-only; the
+updater uses a separate explicit SET_FEATURE command on that interface.
+Keyboard, mouse and Studio remain
 on their existing interfaces. No PC Bluetooth connection is required.
 
 Install the PC dependency from the repository root:
@@ -28,7 +30,9 @@ Install the PC dependency from the repository root:
 python -m pip install --target output/battery/python-packages -r tools/battery/requirements.txt
 ```
 
-Flash the new **left** UF2, reconnect USB, then open `Launch-Battery.cmd`.
+For battery-only firmware support, flash the new **left** UF2 and reconnect USB.
+For charging status and automatic updates, install matching new UF2s on **both**
+halves. Open `tools/battery/Launch-Battery.cmd` (EXE if present, otherwise Python).
 For diagnostic JSON, run `python tools/battery/battery_monitor.py --once`.
 The window refreshes every five seconds; battery measurements normally update
 every sixty seconds. Right is shown as unknown before its first notification
@@ -53,16 +57,27 @@ nRF52840 family, application address range, complete block ordering and the
 embedded CLEAVE left/right identity. Generic, settings-reset, bootloader, and
 older unmarked images are rejected. The validated bytes are held in memory.
 
-Initial installation: choose the new `CLEAVE-right-appupdate.uf2`, leave
+Initial installation: choose a right update-enabled UF2 (the local prepared
+copy is `output/battery/CLEAVE-right-appupdate.uf2`), explicitly select
 **キー操作で更新モードへ入れる** checked, click Start, then connect the right
 half to USB and hold Fn+N for two seconds. The app detects and copies to the
-new UF2 drive. Then repeat for `CLEAVE-left-appupdate.uf2` with Fn+B.
+new UF2 drive. After it disappears, reconnect the parent to USB for verification.
+Then repeat for the left update-enabled UF2 (local copy:
+`output/battery/CLEAVE-left-appupdate.uf2`) with Fn+B.
+These prepared filenames are local copies, not files distributed by Git;
+Actions artifact filenames differ. The embedded marker determines the side.
 Before clicking Start, both halves must be in normal mode (no UF2 drive).
 When the old parent cannot query the newly installed right firmware, the first
-right update remains verification-pending. Install/reconnect the parent and
-confirm that both builds are readable.
+right update remains verification-pending. Keep the same app session running:
+after a verified left update, it automatically checks the pending right build
+for another 30 seconds. Pending state is not persisted across app restarts.
+With one cable, move it from right to left after the right UF2 drive disappears;
+keep both halves powered and paired for key operations and verification.
+The key shortcuts must already be installed; otherwise double-press the target's
+physical reset button after clicking Start instead of using Fn+B/N.
 
-After installation, automatic mode sends an explicit USB feature command to
+After installation, uncheck key-operation mode to use automatic mode. It sends
+an explicit USB feature command to
 the parent. Left boots locally; right boots using the existing encrypted split
 behavior command. Keep the parent USB connected, and connect the right half
 with another USB data cable when updating the right. Wait several seconds for
@@ -75,6 +90,10 @@ identity when available. File copying alone is never reported as verified
 success. The updater window and app cannot be closed normally during a write.
 Connect/disconnect or recovery failures remain visible as errors or pending
 verification. The physical reset button and Fn bootloader keys remain usable.
+The drive itself does not identify left/right; connect only the intended half
+for manual boot entry. Drive detection waits up to 90 seconds, and post-reboot
+verification up to 60 seconds. Hardware flashing through this app remains
+unverified; key-based UF2 entry has been confirmed on both halves.
 
 Feature 3 returns parent info, Feature 5 returns cached child info (32 bytes):
 ID, version (1), side (0 left / 1 right), flags (bit 0 update support, bit 1 USB
@@ -83,6 +102,22 @@ Feature 4 accepts ID=4, version=1, target side, `BOOT`, zero padding. The USB
 collection maximum feature length is 32; Windows padding is accepted only when
 zero. The parent delays the boot action 250 ms to finish the control transfer.
 The child info GATT characteristic returns 16 bytes to fit the default ATT MTU.
+Child update info is polled every five seconds and expires after 20 seconds or
+disconnect. The eight-character build ID is a content hash, not a Git short SHA.
+
+## Source checks and firmware tools
+
+After running `build-exe.ps1`, run from the repository root using its isolated
+Python environment (a plain system Python may not have `hidapi` installed):
+
+```powershell
+& output/battery/build-env/Scripts/python.exe -m unittest discover -s tools/battery -p "test_*.py"
+```
+
+The EXE also accepts `--window` to open the detail window or `--update` to open
+the updater at startup. See [firmware tools](firmware-tools.md) for Actions
+downloads and UF2/configuration checks. The app does not build firmware or
+download updates automatically.
 
 ## Charging status
 

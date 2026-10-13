@@ -52,6 +52,9 @@ CLEAVE HHJP の組み立て、ファームウェア書き込み、ケース作�
 
 ## ビルド関連リンク
 
+- [このフォークのファームウェア設計](../docs/firmware_design.md)
+- [Windows残量・充電状態アプリと更新手順](../tools/battery/README.md)
+- [キー操作によるUF2モード移行](../docs/bootloader-keys.md)
 - [ファームウェア配布ページ](https://github.com/Rimebeck/Cleave-HHJP/releases)
 - [ケースの3Dモデル・PCB 3Dデータ](https://github.com/Rimebeck/Cleave-HHJP/tree/main/models)
 - [ZMK Studio](https://zmk.studio)
