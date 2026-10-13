@@ -137,3 +137,43 @@ Acceptance: compare both charging indicators with the board charge LEDs;
 connect/disconnect each USB cable, confirm the corresponding state changes,
 then verify typing, mouse and Studio. Full-charge classification is not inferred
 from percentages or a deasserted CHG signal. No charging-current settings change.
+
+## Sudden battery-percentage changes: diagnostics
+
+`battery_diagnostics.py` records the raw USB reports, percentages, power state,
+and (with diagnostic firmware) the left battery sensor's cached voltage in mV.
+It does not force ADC sampling, smooth readings, or change the charging circuit.
+The normal battery worker continues to own sampling. The tray app can stay running.
+
+```powershell
+& output/battery/build-env/Scripts/python.exe tools/battery/battery_diagnostics.py --duration 600
+```
+
+This records for ten minutes at one-second intervals to a dated JSONL file
+under `output/battery/`. Use Ctrl+C to finish early. Recording on old firmware
+still captures reports 1/2, but voltage is unavailable. The recorder logs USB
+disconnections and resumes reading after reconnection.
+
+To bundle it without replacing the tray EXE:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/battery/build-diagnostics-exe.ps1
+```
+
+Run `output/battery/dist/CLEAVE-Battery-Diagnostics.exe` from the repository
+root, or set `--output <new JSONL path>`. The standalone EXE needs no Python.
+The output path must not already exist, to preserve earlier recordings.
+
+Read-only Feature 6 has 16 meaningful bytes (request 32 on Windows): ID=6,
+version=1, firmware percentage, power state, voltage mV (uint16 LE), sensor
+percentage, flags (bit0 voltage valid, bit1 sensor percentage valid), uptime
+seconds (uint32 LE), age of the last percentage-change event (uint32 LE,
+`0xffffffff` before the first event). That age is not the last ADC sampling age.
+Voltage and percentage are read sequentially and may briefly straddle an update;
+use repeated records to evaluate discrepancies. Feature 6 is optional to the
+tray app and existing updater; their reports and buffer size remain compatible.
+
+For a drop, compare firmware percentage, sensor percentage, cached voltage,
+power state and uptime. Uptime decreasing indicates a reboot. A simultaneous
+cached-voltage change points toward sampling or the electrical measurement path,
+but does not by itself prove the actual battery voltage changed.

@@ -3,6 +3,8 @@
 #include <zephyr/device.h>
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/usb/usb_device.h>
 #include <zephyr/usb/class/usb_hid.h>
 #include <zmk/battery.h>
@@ -24,7 +26,9 @@ static const uint8_t descriptor[] = {
     0x85, 0x02, 0x09, 0x03, 0x95, 0x05, 0xb1, 0x02,
     0x85, 0x03, 0x09, 0x04, 0x95, 0x1f, 0xb1, 0x02,
     0x85, 0x04, 0x09, 0x05, 0x95, 0x07, 0xb1, 0x02,
-    0x85, 0x05, 0x09, 0x06, 0x95, 0x1f, 0xb1, 0x02, 0xc0,
+    0x85, 0x05, 0x09, 0x06, 0x95, 0x1f, 0xb1, 0x02,
+    /* Read-only cached battery diagnostics; never triggers an ADC sample. */
+    0x85, 0x06, 0x09, 0x07, 0x95, 0x0f, 0xb1, 0x02, 0xc0,
 };
 static struct k_spinlock state_lock;
 static uint8_t right_level;
@@ -33,10 +37,55 @@ static int64_t right_updated;
 static uint8_t report[7];
 static uint8_t power_report[6];
 static uint8_t update_report[CLEAVE_UPDATE_INFO_SIZE];
+static uint8_t diagnostic_report[16];
+static int64_t local_changed;
+static bool local_seen;
+
+static void battery_diagnostics(void) {
+    memset(diagnostic_report, 0, sizeof(diagnostic_report));
+    diagnostic_report[0] = 6;
+    diagnostic_report[1] = 1;
+    diagnostic_report[2] = zmk_battery_state_of_charge();
+    diagnostic_report[3] = cleave_local_power_state();
+#if DT_HAS_CHOSEN(zmk_battery)
+    const struct device *sensor = DEVICE_DT_GET(DT_CHOSEN(zmk_battery));
+#else
+    const struct device *sensor = device_get_binding("BATTERY");
+#endif
+    struct sensor_value value;
+    if (sensor && device_is_ready(sensor)) {
+        /* The ZMK voltage-divider driver returns its cached sample here.
+         * Do not call sensor_sample_fetch: the normal battery worker owns ADC/GPIO. */
+        if (sensor_channel_get(sensor, SENSOR_CHAN_GAUGE_VOLTAGE, &value) == 0) {
+            int32_t mv = value.val1 * 1000 + value.val2 / 1000;
+            if (mv >= 0 && mv <= UINT16_MAX) {
+                sys_put_le16(mv, diagnostic_report + 4);
+                diagnostic_report[7] |= 1;
+            }
+        }
+        if (sensor_channel_get(sensor, SENSOR_CHAN_GAUGE_STATE_OF_CHARGE, &value) == 0 &&
+            value.val1 >= 0 && value.val1 <= 100) {
+            diagnostic_report[6] = value.val1;
+            diagnostic_report[7] |= 2;
+        }
+    }
+    sys_put_le32((uint32_t)(k_uptime_get() / 1000), diagnostic_report + 8);
+    k_spinlock_key_t key = k_spin_lock(&state_lock);
+    uint32_t age = local_seen ? MIN((k_uptime_get() - local_changed) / 1000, UINT32_MAX)
+                             : UINT32_MAX;
+    k_spin_unlock(&state_lock, key);
+    sys_put_le32(age, diagnostic_report + 12);
+}
 
 static int get_report(const struct device *dev, struct usb_setup_packet *setup,
                       int32_t *len, uint8_t **data) {
     ARG_UNUSED(dev);
+    if (setup->wValue == 0x0306) {
+        battery_diagnostics();
+        *data = diagnostic_report;
+        *len = sizeof(diagnostic_report);
+        return 0;
+    }
     if (setup->wValue == 0x0303 || setup->wValue == 0x0305) {
         if (setup->wValue == 0x0303) { cleave_update_local_info(update_report); }
         else { cleave_update_remote_info(update_report); }
@@ -75,11 +124,16 @@ static int get_report(const struct device *dev, struct usb_setup_packet *setup,
 }
 
 static int battery_listener(const zmk_event_t *event) {
+    const struct zmk_battery_state_changed *local = as_zmk_battery_state_changed(event);
     const struct zmk_peripheral_battery_state_changed *battery =
         as_zmk_peripheral_battery_state_changed(event);
     const struct zmk_split_peripheral_status_changed *status =
         as_zmk_split_peripheral_status_changed(event);
     k_spinlock_key_t key = k_spin_lock(&state_lock);
+    if (local) {
+        local_changed = k_uptime_get();
+        local_seen = true;
+    }
     if (battery && battery->source == 0) {
         right_level = battery->state_of_charge;
         right_updated = k_uptime_get();
@@ -91,6 +145,7 @@ static int battery_listener(const zmk_event_t *event) {
     return ZMK_EV_EVENT_BUBBLE;
 }
 ZMK_LISTENER(cleave_usb_battery, battery_listener);
+ZMK_SUBSCRIPTION(cleave_usb_battery, zmk_battery_state_changed);
 ZMK_SUBSCRIPTION(cleave_usb_battery, zmk_peripheral_battery_state_changed);
 ZMK_SUBSCRIPTION(cleave_usb_battery, zmk_split_peripheral_status_changed);
 

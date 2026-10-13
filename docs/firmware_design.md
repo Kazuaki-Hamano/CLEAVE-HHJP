@@ -119,8 +119,10 @@ Studio保存済みの配置は `.keymap` の初期配置に優先します。新
 | 3 | 32 | 親機の更新対応情報 |
 | 4 | 8（Windows送信時32） | ID=4、version=1、対象側、ASCII `BOOT`、ゼロ埋め |
 | 5 | 32 | 子機の更新対応情報キャッシュ |
+| 6 | 16 | 左側の診断情報：残量・電源状態・センサーのキャッシュ電圧/残量・valid flags・uptime・最終残量変化イベントからの経過秒 |
 
 Windowsではcollection最大長32バイトでFeature Reportを読み、ID1/2は有効な7/6バイトを取り出します。ID4は8または32バイトを受け付け、余白はゼロのみです。
+診断用ID6も32バイトで読み、先頭16バイトを取り出します。`sensor_channel_get` で既存センサーのキャッシュを取得し、追加のADCサンプリングは行いません。取得できない値はflagsでunknownを表します。残量変化イベントの経過時間はADC計測の経過時間とは異なります。記録ツールは[診断手順](../tools/battery/README.md#sudden-battery-percentage-changes-diagnostics)を参照してください。
 
 右残量はsource=0の通知で更新し、未取得・切断時はunknownです。0%はunknownと区別します。値が変わらない間は通知が来ないことがあるため、残量には時間だけによる失効を設定していません。
 
