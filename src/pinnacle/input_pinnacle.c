@@ -241,7 +241,8 @@ static int pinnacle_era_write(const struct device *dev, const uint16_t addr, uin
 
 static void pinnacle_report_data(const struct device *dev) {
     const struct pinnacle_config *config = dev->config;
-    uint8_t packet[3];
+    /* Intellimouse is enabled in FeedConfig2: byte 3 is signed wheel count. */
+    uint8_t packet[4];
     int ret;
     ret = pinnacle_seq_read(dev, PINNACLE_STATUS1, packet, 1);
     if (ret < 0) {
@@ -255,13 +256,13 @@ static void pinnacle_report_data(const struct device *dev) {
     if (packet[0] == 0xFF || !(packet[0] & PINNACLE_STATUS1_SW_DR)) {
         return;
     }
-    ret = pinnacle_seq_read(dev, PINNACLE_2_2_PACKET0, packet, 3);
+    ret = pinnacle_seq_read(dev, PINNACLE_2_2_PACKET0, packet, sizeof(packet));
     if (ret < 0) {
         LOG_ERR("read packet: %d", ret);
         return;
     }
 
-    LOG_HEXDUMP_DBG(packet, 3, "Pinnacle Packets");
+    LOG_HEXDUMP_DBG(packet, sizeof(packet), "Pinnacle Packets");
 
     struct pinnacle_data *data = dev->data;
     uint8_t btn = packet[0] &
@@ -295,6 +296,9 @@ static void pinnacle_report_data(const struct device *dev) {
     data->btn_cache = btn;
 
     input_report_rel(dev, INPUT_REL_X, dx, false, K_FOREVER);
+    if (config->native_scroll && packet[3]) {
+        input_report_rel(dev, INPUT_REL_WHEEL, (int8_t)packet[3], false, K_FOREVER);
+    }
     input_report_rel(dev, INPUT_REL_Y, dy, true, K_FOREVER);
 
     return;
@@ -597,6 +601,7 @@ static int pinnacle_pm_action(const struct device *dev, enum pm_device_action ac
         .sleep_en = DT_INST_PROP(n, sleep),                                                        \
         .no_taps = DT_INST_PROP(n, no_taps),                                                       \
         .no_secondary_tap = DT_INST_PROP(n, no_secondary_tap),                                     \
+        .native_scroll = DT_INST_PROP(n, native_scroll),                                           \
         .x_axis_z_min = DT_INST_PROP_OR(n, x_axis_z_min, 5),                                       \
         .y_axis_z_min = DT_INST_PROP_OR(n, y_axis_z_min, 4),                                       \
         .sensitivity = DT_INST_ENUM_IDX_OR(n, sensitivity, PINNACLE_SENSITIVITY_1X),               \

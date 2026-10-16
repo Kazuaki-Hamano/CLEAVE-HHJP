@@ -57,6 +57,11 @@ int main(void) {
     struct input_event button={.type=INPUT_EV_KEY,.code=1,.value=1,.sync=true};
     pointer_api.handle_event(&right,&button,0,0,NULL);
     assert(button.type==INPUT_EV_KEY && button.code==1 && button.value==1);
+    for (int wheel=-128;wheel<=127;wheel++) {
+        struct input_event e={.type=INPUT_EV_REL,.code=INPUT_REL_WHEEL,.value=wheel};
+        pointer_api.handle_event(&right,&e,0,0,NULL);
+        assert(e.code==INPUT_REL_WHEEL && e.value==wheel); /* Native wheel bypasses cursor gain. */
+    }
     local_packet(20,0,&h,&v);assert(navigation_count==0);
     local_packet(44,0,&h,&v);assert(navigation_count==1 && last_forward);
     for (int i=0;i<10;i++) local_packet(100,0,&h,&v);

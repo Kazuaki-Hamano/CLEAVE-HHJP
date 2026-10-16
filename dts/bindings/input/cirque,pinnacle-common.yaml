@@ -14,6 +14,9 @@ properties:
     type: boolean
   no-taps:
     type: boolean
+  native-scroll:
+    type: boolean
+    description: Forward the ASIC Intellimouse wheel count as vertical wheel events.
   sensitivity:
     type: string
     enum:

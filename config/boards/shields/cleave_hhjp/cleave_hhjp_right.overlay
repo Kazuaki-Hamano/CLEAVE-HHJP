@@ -8,6 +8,10 @@
 
 #include "cleave_hhjp_trackpad_spi.dtsi"
 
+&trackpad {
+	native-scroll;
+};
+
 &trackpad_split {
 	device = <&trackpad>;
 };

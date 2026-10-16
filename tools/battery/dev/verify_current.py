@@ -29,6 +29,9 @@ with zipfile.ZipFile(root / 'build-logs.zip') as logs:
         assert fn_bindings[18] == '&mkp 0x2', fn_bindings[18]
         if name == 'left':
             assert not re.search(r'fn_scroll\s*\{', dts), 'Fn must preserve right pointer movement'
+            assert not re.search(r'^\s*native-scroll;', dts, re.M)
+        else:
+            assert re.search(r'^\s*native-scroll;', dts, re.M), 'Right ASIC wheel opt-in missing'
 
         print(name, 'INT5/Fn, INT4/Fn, Kana LANG1 and 200ms hold-tap: PASS', firmware.build)
 assert builds['left'] == builds['right']
