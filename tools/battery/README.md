@@ -1,6 +1,6 @@
 # CLEAVE USB battery display
 
-Trackpad tuning is available from the tray's **タッチパッド設定** menu after updating both halves. See [the settings guide](trackpad-settings.md) for speed, acceleration, maximum multiplier, sensitivity, and saving. If the current EXE is running, the new build is provided separately at `output/battery/trackpad/dist/CLEAVE-Battery.exe`; exit the old instance before launching it.
+Trackpad tuning is available from the tray's **タッチパッド設定** menu. See [the settings guide](trackpad-settings.md) for speed, acceleration, maximum multiplier, Fn scroll amount, and saving. Sensitivity is fixed at 1x. Speed and maximum multiplier use 0.1x steps. The current EXE is standardized at `output/battery/dist/CLEAVE-Battery.exe`; exit an older instance before starting it. Both halves need the native split tuning support; upgrading from `5fedfa36` to the current controls only requires updating the left half.
 
 ## Windows EXE / notification area
 
@@ -8,6 +8,13 @@ Run `output/battery/dist/CLEAVE-Battery.exe`. Python is bundled and is not
 required on the destination PC. The app starts in the notification area beside
 the clock. Hover over the two-battery icon to see left/right percentages.
 The icon may initially be in Windows' hidden-icons overflow.
+USB-powered halves without an active charging signal show `-%（USB給電）` in
+the tooltip and detail window, and their icon does not show a percentage fill.
+Charging halves show their measured percentage with `充電中`, a percentage
+fill, and the charging bolt. Battery-powered halves also show their percentage.
+The switch itself is not detected. Charging is not proof of switch-ON, and
+the percentage remains a voltage-based estimate, especially while charging.
+Raw percentages remain available in diagnostic JSON and recording tools.
 Right-click for **残量ウィンドウを開く**, **ファームウェア更新**, or **終了**. Closing the window keeps
 the app running. Only one instance can run. Readings refresh every five seconds.
 The detail window shows the age of the last peripheral notification. An
@@ -44,7 +51,7 @@ Percentages are ZMK's voltage-based estimates, including while charging.
 
 Hardware acceptance: verify both values, switch the right half off and confirm
 unknown, switch it on and wait for a value; unplug/reconnect USB and confirm
-recovery. Also verify typing, mouse layer, and Studio still work.
+recovery. Also verify typing, trackpad movement, Fn scrolling, and Studio still work.
 
 Protocol: vendor usage page `0xff60`, usage `1`, Feature report ID `1`.
 Seven bytes: ID, protocol version (1), left %, right %, right-valid (0/1),
@@ -60,13 +67,13 @@ embedded CLEAVE left/right identity. Generic, settings-reset, bootloader, and
 older unmarked images are rejected. The validated bytes are held in memory.
 
 Initial installation: choose a right update-enabled UF2 (the local prepared
-copy is `output/battery/CLEAVE-right-appupdate.uf2`), explicitly select
+copy is `output/firmware/bc546789/`'s right UF2), explicitly select
 **キー操作で更新モードへ入れる** checked, click Start, then connect the right
 half to USB and hold Fn+N for two seconds. The app detects and copies to the
 new UF2 drive. After it disappears, reconnect the parent to USB for verification.
 Then repeat for the left update-enabled UF2 (local copy:
-`output/battery/CLEAVE-left-appupdate.uf2`) with Fn+B.
-These prepared filenames are local copies, not files distributed by Git;
+`output/firmware/bc546789/`'s left UF2) with Fn+B.
+These firmware artifacts are saved locally, not distributed by Git;
 Actions artifact filenames differ. The embedded marker determines the side.
 Before clicking Start, both halves must be in normal mode (no UF2 drive).
 When the old parent cannot query the newly installed right firmware, the first
@@ -141,6 +148,12 @@ then verify typing, mouse and Studio. Full-charge classification is not inferred
 from percentages or a deasserted CHG signal. No charging-current settings change.
 
 ## Sudden battery-percentage changes: diagnostics
+
+The USB-connected left half should have its power switch **ON** when checking
+battery percentage. An OFF→ON→OFF hardware comparison changed the cached
+voltage from about 3.74 V to 4.00 V and back, with matching 39%→73%→39%
+readings. Treat switch-OFF readings as unreliable for the cell's actual charge.
+See [the investigation](../../docs/battery-measurement.md) for evidence and limits.
 
 `battery_diagnostics.py` records the raw USB reports, percentages, power state,
 and (with diagnostic firmware) the left battery sensor's cached voltage in mV.

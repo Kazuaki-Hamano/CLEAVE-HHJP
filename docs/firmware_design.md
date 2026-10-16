@@ -24,7 +24,7 @@
 
 | ファイル・ディレクトリ | 役割 |
 |---|---|
-| [`config/cleave_hhjp.keymap`](../config/cleave_hhjp.keymap) | 初期キーマップ、hold-tap、Bluetooth操作、マウス操作 |
+| [`config/cleave_hhjp.keymap`](../config/cleave_hhjp.keymap) | 通常・Fnの2レイヤー、hold-tap、Bluetooth操作 |
 | [`cleave_hhjp.dtsi`](../config/boards/shields/cleave_hhjp/cleave_hhjp.dtsi) | 70キーの物理レイアウト、5行×15列の変換、共通kscan |
 | [`cleave_hhjp_left.overlay`](../config/boards/shields/cleave_hhjp/cleave_hhjp_left.overlay) | 左側GPIOマトリックス |
 | [`cleave_hhjp_right.overlay`](../config/boards/shields/cleave_hhjp/cleave_hhjp_right.overlay) | 右側GPIOマトリックス、列オフセット7 |
@@ -44,7 +44,7 @@
 
 設定ファイルの記述と実効設定は区別します。Actionsログの `Merged configuration` と各ターゲットのKconfig出力を確認してください。
 
-保存済みの成功ビルド `cc4e4479`（Run `38242839272`）では、左側は `cleave_hhjp_left.conf` を読み込み、右側はこのシールドの `.conf` を読み込んでいません。両側とも `cleave_hhjp.conf` はマージされていません。これは保存済みビルドの証拠であり、今後のビルド結果は毎回確認します。
+現行の成功ビルド `bc546789`（Run `38914707698`）では、左側は `cleave_hhjp_left.conf` を読み込み、右側はこのシールドの `.conf` を読み込んでいません。両側とも `cleave_hhjp.conf` はマージされていません。今後のビルド結果も毎回確認します。
 
 左側 `.conf` の明示設定は次のとおりです。
 
@@ -59,7 +59,7 @@
 
 `Kconfig.defconfig` は左側の `ZMK_KEYBOARD_NAME` を `CLEAVE HHJP`、`ZMK_SPLIT_ROLE_CENTRAL` を `y`、`ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS` を `1`、`BT_MAX_CONN` を `5` に設定します。左右とも `ZMK_SPLIT=y` が既定です。Bluetoothプロファイル1〜5の選択と同時接続数は別の概念です。
 
-共通名ファイルには `CONFIG_ZMK_IDLE_TIMEOUT=300000`（5分）、`CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=3600000`（60分）、`CONFIG_ZMK_SLEEP=y`、NFCピンのGPIO化、+8dBm、残量proxyなどが記述されています。これらを現在の実効設定として案内しないでください。上記保存済みビルドのidle timeoutは左右とも `30000`（30秒）で、`CONFIG_ZMK_SLEEP=y` はありません。
+共通名ファイルには `CONFIG_ZMK_IDLE_TIMEOUT=300000`（5分）、`CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=3600000`（60分）、`CONFIG_ZMK_SLEEP=y`、NFCピンのGPIO化、+8dBm、残量proxyなどが記述されています。これらは現在の実効設定ではありません。現行ビルドのidle timeoutは左右とも `30000`（30秒）で、`CONFIG_ZMK_SLEEP=y` はありません。右側の`CONFIG_INPUT_PINNACLE=y`もビルドログで確認済みです。
 
 スリープ、NFCピン、BLE出力などを変更する場合は、実際に読み込まれる側の設定へ反映し、Kconfig・生成DTS・実機で確認します。この文書の更新ではファームウェア設定を変更していません。
 
@@ -92,7 +92,7 @@ Fn+Ctrl+1〜5は `BT_SEL 0`〜`BT_SEL 4`、Fn+Ctrl+Backspaceは `BT_CLR`。Ctrl�
 
 右側TM040040の移動と左右タップクリックをinput-splitで左側へ転送します。`cleave_hhjp_left.overlay`のlistenerはFnレイヤー1で`trackpad_scroll`を適用し、横移動を抑制して縦スクロールに変換します。`src/trackpad_pointer.c`で`-Y × スクロール倍率 / 16`を計算し、端数を保持します。1.0倍は従来と同量です。ボタンイベントは変更しません。通常レイヤーではカーソル速度と加速を適用します。
 
-LANG2長押しと専用Fnキーのどちらでもスクロールになります。旧マウスレイヤー、`src/mouse_speed.c`、専用behavior/scalerのbindingとCMake参照は削除しました。`src/trackpad_settings.c`でUSB Feature 7 version 2の変更・保存・固定感度1xの確認を行います。基本速度と最大倍率は0.1倍刻み、スクロール量は0.1～4.0倍です。旧保存値は引き継ぎ、感度を1x、スクロール量を1.0倍へ移行します。仕様と確認範囲は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。従来の反映・保存はユーザー確認済み、今回追加のスクロール量は実機確認待ちです。
+LANG2長押しと専用Fnキーのどちらでもスクロールになります。旧マウスレイヤー、`src/mouse_speed.c`、専用behavior/scalerのbindingとCMake参照は削除しました。`src/trackpad_settings.c`でUSB Feature 7 version 2の変更・保存・固定感度1xの確認を行います。基本速度と最大倍率は0.1倍刻み、スクロール量は0.1～4.0倍です。旧保存値は引き継ぎ、感度を1x、スクロール量を1.0倍へ移行します。仕様と確認範囲は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。設定の反映・保存・再起動後の保持はユーザー確認済みです。スクロール量は使い心地に合わせて調整してください。
 
 ### UF2移行
 
@@ -119,6 +119,7 @@ Studio保存済みの配置は `.keymap` の初期配置に優先します。新
 | 4 | 8（Windows送信時32） | ID=4、version=1、対象側、ASCII `BOOT`、ゼロ埋め |
 | 5 | 32 | 子機の更新対応情報キャッシュ |
 | 6 | 16 | 左側の診断情報：残量・電源状態・センサーのキャッシュ電圧/残量・valid flags・uptime・最終残量変化イベントからの経過秒 |
+| 7 | 32 | version=2、カーソル速度・加速・固定感度1x・Fnスクロール量の取得、変更、明示保存、通信診断 |
 
 Windowsではcollection最大長32バイトでFeature Reportを読み、ID1/2は有効な7/6バイトを取り出します。ID4は8または32バイトを受け付け、余白はゼロのみです。
 診断用ID6も32バイトで読み、先頭16バイトを取り出します。`sensor_channel_get` で既存センサーのキャッシュを取得し、追加のADCサンプリングは行いません。取得できない値はflagsでunknownを表します。残量変化イベントの経過時間はADC計測の経過時間とは異なります。記録ツールは[診断手順](../tools/battery/README.md#sudden-battery-percentage-changes-diagnostics)を参照してください。
@@ -127,6 +128,7 @@ Windowsではcollection最大長32バイトでFeature Reportを読み、ID1/2は
 
 電源状態は0=unknown、1=バッテリー、2=USB給電（充電信号なし）、3=充電中。`src/charge_status.c` はP0.17のactive-low CHGを入力として読み、VBUSを別に検出します。USBありの場合のみpull-upを使います。充電電流の設定変更は行いません。右側の暗号化GATT値を5秒ごとに取得し、切断または最終取得から約20秒超でunknownになります。
 USB給電やCHG解除だけでは満充電とは判定しません。残量%はZMKの電圧による推定値です。
+USB接続中の左側はスイッチOFF/ONにより測定電圧と残量が変わることを確認しました。残量確認時はスイッチONを使用します。経緯・測定値・確認範囲は[調査結果](battery-measurement.md)を参照してください。
 
 ID3/5は `[ID, version, side, flags, build8, CHHP, chipID8, reserved]`。sideは0=左、1=右、flagsはbit0=更新対応、bit1=USB給電です。子機GATTは先頭16バイトのみで、親機キャッシュのchipIDはゼロです。子機情報は5秒ごとに取得し、切断または20秒超で失効します。
 

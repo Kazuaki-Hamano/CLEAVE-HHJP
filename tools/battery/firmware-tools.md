@@ -5,14 +5,14 @@
 ```powershell
 python tools/battery/github_build.py
 python tools/battery/github_build.py download
-python tools/battery/verify_firmware.py output/firmware/cc4e4479
+python tools/battery/verify_firmware.py output/firmware/bc546789
 ```
 
 `github_build.py` は Git の認証情報を使用して
 `Kazuaki-Hamano/CLEAVE-HHJP` の `battery/peripheral-fetch` ブランチの
 最新 Actions 実行を確認します。`download` 指定時は完了済み実行の
 成果物とログを `output/firmware/` に取得します。
-保存先の末尾は取得したrunのGitコミット先頭8桁です。上の`cc4e4479`は既存の保存済みビルド例で、新しいビルドを確認する場合は取得先に置き換えてください。`download`はrunの完了を条件としており、ビルド成功を保証する操作ではありません。
+保存先の末尾は取得したrunのGitコミット先頭8桁です。現在保持するビルドは`bc546789`（現行、HID設定version 2）と`5fedfa36`（直前の動作確認済み、version 1）です。新しいビルドを確認する場合は取得先に置き換えてください。`download`はrunの完了を条件としており、ビルド成功を保証する操作ではありません。
 
 `verify_firmware.py` は取得した UF2 の構造、左側の HID 記述子、
 ビルドログ内の設定を検証し、同じフォルダーに `checksums.json` を保存します。
