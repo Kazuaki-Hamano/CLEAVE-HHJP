@@ -15,13 +15,15 @@
 static struct bt_uuid_128 value_uuid = BT_UUID_INIT_128(TP_VALUE);
 static struct k_spinlock cfg_lock;
 static struct cleave_trackpad_config config = {200, 0, 300, 1};
-static struct cleave_trackpad_config saved = {200, 0, 300, 1};
 static uint32_t generation = 1;
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+static struct cleave_trackpad_config saved = {200, 0, 300, 1};
 static uint8_t peer_sensitivity;
 static int8_t peer_error;
 static int64_t peer_updated;
 static atomic_t save_pending;
 static int8_t save_error;
+#endif
 
 int cleave_trackpad_validate(const struct cleave_trackpad_config *c) {
     return c->speed >= 25 && c->speed <= 800 && c->acceleration <= 300 &&

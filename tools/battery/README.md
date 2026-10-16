@@ -1,5 +1,7 @@
 # CLEAVE USB battery display
 
+Trackpad tuning is available from the tray's **タッチパッド設定** menu after updating both halves. See [the settings guide](trackpad-settings.md) for speed, acceleration, maximum multiplier, sensitivity, and saving. If the current EXE is running, the new build is provided separately at `output/battery/trackpad/dist/CLEAVE-Battery.exe`; exit the old instance before launching it.
+
 ## Windows EXE / notification area
 
 Run `output/battery/dist/CLEAVE-Battery.exe`. Python is bundled and is not

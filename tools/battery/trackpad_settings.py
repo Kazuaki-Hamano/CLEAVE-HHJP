@@ -100,8 +100,8 @@ def open_window(parent, is_busy=lambda: False):
 
     window = tk.Toplevel(parent)
     window.title('CLEAVE タッチパッド設定')
-    window.geometry('580x440')
-    window.resizable(False, False)
+    window.geometry('620x480')
+    window.minsize(580, 440)
     frame = ttk.Frame(window, padding=20)
     frame.pack(fill='both', expand=True)
     ttk.Label(frame, text='左側をUSB接続して調整します。変更はその場で反映されます。').pack(anchor='w')
@@ -171,6 +171,9 @@ def open_window(parent, is_busy=lambda: False):
     save_button.pack(side='left')
     ttk.Button(buttons, text='閉じる', command=window.destroy).pack(side='right')
     refresh_labels()
+
+    window.update_idletasks()
+    window.geometry(f'{max(620, frame.winfo_reqwidth())}x{max(480, frame.winfo_reqheight())}')
 
     def worker():
         while not closed.is_set():

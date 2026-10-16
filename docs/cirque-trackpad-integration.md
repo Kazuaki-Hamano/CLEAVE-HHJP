@@ -24,15 +24,17 @@ USB端子を上、シールド面を手前にしたXIAOの表面では、左側D
 
 ## ファームウェア
 
-- `config/west.yml`に[petejohanson/cirque-input-module](https://github.com/petejohanson/cirque-input-module)を追加。依存は`0de55f36bc720b5be3d8880dc856d4d78baf5214`に固定。
+- [petejohanson/cirque-input-module](https://github.com/petejohanson/cirque-input-module)の`0de55f36bc720b5be3d8880dc856d4d78baf5214`を基に、実行時の感度変更を追加したドライバーを`src/pinnacle/`へ取り込みました。外部west依存は削除しました。
 - 右側の`Kconfig.defconfig`で`ZMK_POINTING`と`SPI`を有効化。右側には従来どおり共通の`cleave_hhjp.conf`が読み込まれます。
 - 右overlayの`spi2`を追加GPIOに割り当て、1MHzのSPI、CS active-low、DR active-highで読み取ります。キーのD0～D10、P0.09、P0.10は変更しません。
 - 共通`cleave_hhjp_trackpad.dtsi`に`zmk,input-split`（ID 0）を定義。右側の実デバイス→左右間BLE→左側listener→USB/BLEのマウスレポートという経路です。
 - 左右両方のUF2を更新してください。右だけの更新では転送先がありません。
 - 初回対応済みの4222ac0bから上下反転を修正する際は、右側だけの更新で反映されます。
 - 常時カーソル移動と左右タップクリックを有効化。`no-taps`と`no-secondary-tap`を指定しないことで、通常タップとチップ内蔵の右クリック領域を利用します。領域は標準方向の右上で、現ドライバーに位置・広さの指定項目はありません。実装方向での位置は実機で確認します。`sensitivity = "1x"`、`sleep`、`y-invert`を指定。
-- 既存のW/A/S/D、クリック、スクロール、1/2/3とShift/Altの速度設定は維持。速度処理は既存の`mmv_input_listener`専用で、パッドの移動には適用しません。
-- `mouse_speed.c`はホストへ送信する左側のみコンパイルし、右側に中央専用HID処理をリンクしません。
+- ユーザーが通常タップの左クリックと右下端の右クリックを確認済み。
+- Mouseレイヤーと専用速度処理を削除。旧LANG1位置は通常のINT4キーに戻します。
+- LANG2長押しでFnレイヤー1が有効な間、左側listenerでパッドの上下移動を縦スクロールに変換します。横移動を0倍、Y移動を-1/16倍（端数保持）にしてからホイールへ変換。左右の専用Fnキーでも有効です。タップクリックとFnのキー操作は維持します。
+- 基本速度・加速の強さ・最大倍率・検出感度をアプリから変更し、左側へ保存できます。操作手順・範囲・初期値・実機確認項目は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。速度・加速とFnスクロールは別に処理します。
 
 ## 検証
 
@@ -42,7 +44,7 @@ USB端子を上、シールド面を手前にしたXIAOの表面では、左側D
 
 1. 左右を更新して再起動し、通常キーと左右の接続を確認。
 2. パッドでカーソルが動くか、指の移動方向と合うかを確認。
-3. 通常領域のタップで左クリック、特定の端で右クリックとなること、既存マウスレイヤーのクリック・スクロール・速度変更を確認。
+3. 通常領域のタップで左クリック、右下端で右クリック、LANG2長押しで縦スクロールとなることを確認。
 4. USB接続と、使用する場合はPCへのBluetooth接続を確認。
 5. 放置後の復帰、左右の電源再投入・再接続を確認。
 

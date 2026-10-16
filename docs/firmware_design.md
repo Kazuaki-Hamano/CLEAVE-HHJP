@@ -83,17 +83,16 @@ RGB LEDの定義はこのdtsiにはなく、boardと `rgbled_adapter` モジュ�
 |---|---|---|
 | 0 | `default_layer` / Default | HHKB JPベースの通常入力 |
 | 1 | `fn_layer` / Fn | F1〜F12、音量・ミュート・Eject、ナビゲーション、Bluetooth、UF2移行 |
-| 2 | `mouse_layer` / Mouse | 移動・クリック・スクロールと速度調整 |
 
-左右の専用Fnキーは `&mo 1`。左の旧LANG2位置は `&lt 1 INT5`、右Space直後の旧LANG1位置は `&lt 2 INT4` です。短押しはInternational5 / International4、200msのhold-tap判定後はFn / Mouseになります。隣の独立したKana位置は従来の `&kp LANG1` です。右側の並びはINT4、Kana、Alt、Fnです。`&lt` は `tap-preferred` で、別キーを押しただけでは即座にhold確定しません。
+左右の専用Fnキーは `&mo 1`。左の旧LANG2位置は `&lt 1 INT5`、右Space直後の旧LANG1位置は通常の `&kp INT4` です。LANG2は短押しでInternational5、200msのhold-tap判定後はFnになります。隣の独立したKana位置は従来の `&kp LANG1` です。右側の並びはINT4、Kana、Alt、Fnです。`&lt` は `tap-preferred` で、別キーを押しただけでは即座にhold確定しません。Mouseレイヤーは削除しました。
 
 Fn+Ctrl+1〜5は `BT_SEL 0`〜`BT_SEL 4`、Fn+Ctrl+Backspaceは `BT_CLR`。CtrlなしではF1〜F5 / Deleteです。`zmk,behavior-mod-morph` で実装しています。
 
-### マウス
+### タッチパッド
 
-W/A/S/Dが上/左/下/右、Q/Eが左/右クリック、Xが中クリック、R/Fが上/下スクロールです。1/2/3が低速/通常/高速（基準速度600に対して0.5倍/1倍/2倍）。加速時間は300ms、指数は2です。
-Shift位置を押している間は1/4、Alt位置を押している間は2倍になり、同時押しでは低速が優先されます。MouseレイヤーのShift/Alt位置は速度調整専用で、修飾キーをホストへ送信しません。`src/mouse_speed.c` は実際のShift/Alt修飾状態も参照します。
-速度選択はRAMのみで、レイヤーを離しても保持し、再起動で通常へ戻ります。スケーラーはX/Y移動だけに適用し、スクロールは変更しません。
+右側TM040040の移動と左右タップクリックをinput-splitで左側へ転送します。`cleave_hhjp_left.overlay`のlistenerはFnレイヤー1で`zip_x_scaler 0 1`、`zip_y_scaler (-1) 16`、`zip_xy_to_scroll_mapper`を順に適用し、横移動を抑制して縦スクロールに変換します。上方向の負のY移動を正のホイール値に変換し、端数は標準スケーラーに保持させます。ボタンイベントは変更しません。通常レイヤーでは元のカーソル移動です。
+
+LANG2長押しと専用Fnキーのどちらでもスクロールになります。旧マウスレイヤー、`src/mouse_speed.c`、専用behavior/scalerのbindingとCMake参照は削除しました。通常移動は`src/trackpad_pointer.c`で速度と加速を処理し、`src/trackpad_settings.c`でUSB Feature 7の変更・保存・左右間の検出感度同期を行います。仕様と確認範囲は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。今回追加の設定とスクロールは実機確認待ちです。
 
 ### UF2移行
 
