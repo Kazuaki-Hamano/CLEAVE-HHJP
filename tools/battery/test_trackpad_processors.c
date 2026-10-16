@@ -25,18 +25,51 @@ static int scroll(struct device *dev) {
     now += 10;
     return e.value;
 }
+
+static bool fn;
+static unsigned navigation_count;
+static bool last_forward;
+bool zmk_keymap_layer_active(unsigned layer) { assert(layer==1); return fn; }
+void cleave_trackpad_navigate(bool forward) { navigation_count++; last_forward=forward; }
+static void local_packet(int x, int y, int *horizontal, int *vertical) {
+    struct input_event e={.type=INPUT_EV_REL,.code=INPUT_REL_X,.value=x};
+    local_control_api.handle_event(NULL,&e,0,0,NULL);
+    assert(fn ? e.value==0 : e.code==INPUT_REL_HWHEEL);
+    *horizontal=e.value;
+    e=(struct input_event){.type=INPUT_EV_REL,.code=INPUT_REL_Y,.value=y,.sync=true};
+    local_control_api.handle_event(NULL,&e,0,0,NULL);
+    assert(fn ? e.value==0 : e.code==INPUT_REL_WHEEL);
+    *vertical=e.value;
+    now+=10;
+}
 int main(void) {
-    struct device right={&remote_pointer}, left={&local_pointer};
+    struct device right={&remote_pointer};
     assert(move(&right,1)==0 && move(&right,1)==0 && move(&right,1)==0);
-    assert(move(&left,1)==0); /* Must not inherit the right pad's 0.9 remainder. */
-    assert(move(&right,1)==1);
-    remote_pointer=(struct pointer_state){0};
-    local_pointer=(struct pointer_state){0};
-    cfg.speed=200; cfg.acceleration=100;
-    move(&right,100); move(&right,100);
-    assert(move(&left,1)==2); /* Must not inherit right's acceleration. */
-    right.data=&remote_scroll; left.data=&local_scroll;
-    assert(scroll(&right)==0 && scroll(&left)==0);
-    assert(scroll(&right)==1 && scroll(&left)==1);
-    puts("Independent left/right acceleration and fractional cursor/scroll state: PASS");
+    int h,v;
+    local_packet(8,-8,&h,&v);assert(h==0 && v==0);
+    assert(move(&right,1)==1); /* Local scrolling does not affect pointer fractions. */
+    local_packet(8,-8,&h,&v);assert(h==1 && v==1);
+    right.data=&remote_scroll;
+    assert(scroll(&right)==0 && scroll(&right)==1);
+    fn=true;
+    local_packet(20,0,&h,&v);assert(navigation_count==0);
+    local_packet(44,0,&h,&v);assert(navigation_count==1 && last_forward);
+    for (int i=0;i<10;i++) local_packet(100,0,&h,&v);
+    assert(navigation_count==1);
+    now+=180;
+    local_packet(-64,0,&h,&v);assert(navigation_count==2 && !last_forward);
+    now+=180;
+    local_packet(64,64,&h,&v);assert(navigation_count==2); /* Diagonal is not a swipe. */
+    fn=false;local_packet(0,0,&h,&v);
+    fn=true;local_packet(0,100,&h,&v);assert(navigation_count==2);
+    now+=180;local_packet(32,0,&h,&v);
+    fn=false;local_packet(0,0,&h,&v);
+    fn=true;local_packet(32,0,&h,&v);assert(navigation_count==2); /* No Fn carry-over. */
+    local_packet(32,0,&h,&v);assert(navigation_count==3 && last_forward);
+    fn=false;
+    local_packet(-16,16,&h,&v);assert(h==-1 && v==-1);
+    fn=true;local_packet(32,0,&h,&v);
+    cleave_trackpad_reset_local(); /* Fn released/repressed without intervening pad events. */
+    local_packet(32,0,&h,&v);assert(navigation_count==3);
+    puts("Local 2D scroll, Fn swipe direction/threshold/latch/rearm, right isolation: PASS");
 }

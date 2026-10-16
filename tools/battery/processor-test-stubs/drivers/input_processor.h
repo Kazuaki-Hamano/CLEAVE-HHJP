@@ -11,4 +11,5 @@ struct zmk_input_processor_driver_api {
 #define INPUT_REL_X 0
 #define INPUT_REL_Y 1
 #define INPUT_REL_WHEEL 8
+#define INPUT_REL_HWHEEL 6
 #define ZMK_INPUT_PROC_CONTINUE 0
