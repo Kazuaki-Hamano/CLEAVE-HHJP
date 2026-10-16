@@ -61,6 +61,10 @@ def pending_message(status):
         return '右側への設定通信を開始しています。長く続く場合は送信処理が停止しています。'
     if stage == 7:
         return '右側への設定通信は送信済みですが、応答が届いていません。'
+    if stage == 8:
+        return 'ZMK標準通信で感度を指定しました。右側の反映結果を待っています。'
+    if stage == 9 and status.get('sensor_error'):
+        return f'右側のセンサー設定でエラーが発生しました（{status["sensor_error"]}）。'
     if stage == 3:
         return f'右側への通信を開始できません（エラー {transport["submit_error"]}）。'
     if stage == 4:

@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT */
+#define DT_DRV_COMPAT cleave_behavior_trackpad_settings
 #include <string.h>
 #include <errno.h>
 #include <zephyr/kernel.h>
@@ -8,8 +9,18 @@
 #include <zephyr/sys/atomic.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/input/input.h>
+#include <drivers/behavior.h>
+#include <zmk/behavior.h>
+#include <zmk/event_manager.h>
+#include <zmk/events/split_peripheral_status_changed.h>
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#include <zmk/split/central.h>
+#else
+#include <zmk/split/peripheral.h>
+#endif
 #include "trackpad_settings.h"
-#include "peer_work.h"
+#include "trackpad_status.h"
 
 #define TP_SERVICE BT_UUID_128_ENCODE(0xb6f4a630, 0x3790, 0x4c3c, 0x934d, 0x911d84233b10)
 #define TP_VALUE BT_UUID_128_ENCODE(0xb6f4a631, 0x3790, 0x4c3c, 0x934d, 0x911d84233b10)
@@ -147,8 +158,8 @@ int cleave_trackpad_command(const uint8_t *data, unsigned len) { return -ENOTSUP
 void cleave_trackpad_report(uint8_t *out) { memset(out, 0, 32); }
 #endif
 
-/* Left returns desired sensitivity; right returns applied sensitivity and status.
- * Reads require the existing encrypted split connection, never a new host pairing. */
+/* Retain the legacy encrypted read service for older diagnostic tooling.
+ * Runtime tuning now uses the standard split behavior/input transport below. */
 static ssize_t read_value(struct bt_conn *conn, const struct bt_gatt_attr *attr,
                            void *buf, uint16_t len, uint16_t offset) {
     uint8_t value[3] = {1};
@@ -166,64 +177,91 @@ BT_GATT_SERVICE_DEFINE(cleave_trackpad_service,
     BT_GATT_PRIMARY_SERVICE(BT_UUID_DECLARE_128(TP_SERVICE)),
     BT_GATT_CHARACTERISTIC(&value_uuid.uuid, BT_GATT_CHRC_READ,
                             BT_GATT_PERM_READ_ENCRYPT, read_value, NULL, NULL));
-static atomic_t read_pending;
-static struct bt_gatt_read_params read_params;
-static uint8_t read_done(struct bt_conn *conn, uint8_t err,
-                         struct bt_gatt_read_params *params, const void *data, uint16_t len) {
-    ARG_UNUSED(conn); ARG_UNUSED(params);
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+static void receive_status(struct input_event *event) {
+    if (event->dev != DEVICE_DT_GET(DT_NODELABEL(trackpad_split)) ||
+        event->type != INPUT_EV_MSC || event->code != CLEAVE_TRACKPAD_STATUS_CODE) { return; }
+    uint8_t applied;
+    int8_t error;
+    if (!cleave_trackpad_status_decode(event->value, &applied, &error)) { return; }
+    k_spinlock_key_t key = k_spin_lock(&cfg_lock);
+    peer_sensitivity = applied;
+    peer_error = error;
+    peer_updated = k_uptime_get();
+    k_spin_unlock(&cfg_lock, key);
     atomic_inc(&transport_completions);
-    atomic_set(&transport_att_error, err);
-    atomic_set(&transport_length, len);
-    atomic_set(&transport_stage, err ? 4 : 5);
-    if (!err && data && len == 3 && ((const uint8_t *)data)[0] == 1) {
-        atomic_set(&transport_stage, 6);
-        const uint8_t *v = data;
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+    atomic_set(&transport_length, 4);
+    atomic_set(&transport_stage, 9);
+}
+INPUT_CALLBACK_DEFINE(DEVICE_DT_GET(DT_NODELABEL(trackpad_split)), receive_status);
+
+static int split_status(const zmk_event_t *event) {
+    const struct zmk_split_peripheral_status_changed *status =
+        as_zmk_split_peripheral_status_changed(event);
+    if (status && !status->connected) {
         k_spinlock_key_t key = k_spin_lock(&cfg_lock);
-        peer_sensitivity = v[1]; peer_error = (int8_t)v[2];
-        peer_updated = k_uptime_get();
+        peer_updated = 0;
         k_spin_unlock(&cfg_lock, key);
-#else
-        if (v[1] >= 1 && v[1] <= 4) { cleave_pinnacle_sensitivity_request(v[1]); }
-#endif
+        atomic_set(&transport_stage, 0);
     }
-    atomic_clear(&read_pending);
-    return BT_GATT_ITER_STOP;
+    return ZMK_EV_EVENT_BUBBLE;
 }
-static void poll_peer(struct bt_conn *conn, void *user) {
-    ARG_UNUSED(user);
-    struct bt_conn_info info;
-    if (bt_conn_get_info(conn, &info) || info.state != BT_CONN_STATE_CONNECTED ||
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-        info.role != BT_CONN_ROLE_CENTRAL ||
-#else
-        info.role != BT_CONN_ROLE_PERIPHERAL ||
-#endif
-        false) {
-        return;
-    }
-    bt_security_t security = bt_conn_get_security(conn);
-    atomic_set(&transport_security, security);
-    if (security < BT_SECURITY_L2) { atomic_set(&transport_stage, 1); return; }
-    if (!atomic_cas(&read_pending, 0, 1)) { return; }
-    atomic_inc(&transport_attempts);
-    atomic_set(&transport_stage, 2);
-    read_params = (struct bt_gatt_read_params){.func = read_done, .handle_count = 0,
-        .by_uuid = {.start_handle = 1, .end_handle = 0xffff, .uuid = &value_uuid.uuid}};
-    int err = bt_gatt_read(conn, &read_params);
-    atomic_set(&transport_submit_error, err);
-    if (err) { atomic_set(&transport_stage, 3); atomic_clear(&read_pending); }
-    else { atomic_cas(&transport_stage, 2, 7); }
-}
+ZMK_LISTENER(cleave_trackpad_split_status, split_status);
+ZMK_SUBSCRIPTION(cleave_trackpad_split_status, zmk_split_peripheral_status_changed);
+
 static void poll(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(poll_work, poll);
 static void poll(struct k_work *work) {
     ARG_UNUSED(work);
-    bt_conn_foreach(BT_CONN_TYPE_LE, poll_peer, NULL);
-    k_work_reschedule_for_queue(&cleave_peer_work_q, &poll_work, K_SECONDS(1));
+    struct cleave_trackpad_config cfg;
+    cleave_trackpad_get(&cfg, NULL);
+    struct zmk_behavior_binding binding = {
+        .behavior_dev = DEVICE_DT_NAME(DT_NODELABEL(tp_sens)), .param1 = cfg.sensitivity};
+    struct zmk_behavior_binding_event event = {.source = 0, .position = 0,
+                                               .timestamp = k_uptime_get()};
+    atomic_inc(&transport_attempts);
+    int err = zmk_split_central_invoke_behavior(0, &binding, event, true);
+    atomic_set(&transport_submit_error, err);
+    /* Keep the successful response stage visible until its freshness expires. */
+    k_spinlock_key_t key = k_spin_lock(&cfg_lock);
+    bool fresh = peer_updated && k_uptime_get() - peer_updated < 5000;
+    k_spin_unlock(&cfg_lock, key);
+    if (!fresh) { atomic_set(&transport_stage, err ? 3 : 8); }
+    k_work_reschedule(&poll_work, K_SECONDS(1));
 }
 static int trackpad_init(void) {
-    k_work_schedule_for_queue(&cleave_peer_work_q, &poll_work, K_SECONDS(2));
+    k_work_schedule(&poll_work, K_SECONDS(2));
     return 0;
 }
 SYS_INIT(trackpad_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
+#else
+static void send_status(struct k_work *work) {
+    ARG_UNUSED(work);
+    struct zmk_split_transport_peripheral_event event = {
+        .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT,
+        .data = {.input_event = {.reg = 0, .type = INPUT_EV_MSC,
+            .code = CLEAVE_TRACKPAD_STATUS_CODE, .sync = false,
+            .value = cleave_trackpad_status_encode(cleave_pinnacle_sensitivity_applied(),
+                                                   cleave_pinnacle_sensitivity_error())}}};
+    zmk_split_peripheral_report_event(&event);
+}
+K_WORK_DELAYABLE_DEFINE(status_work, send_status);
+#endif
+
+static int request_sensitivity(struct zmk_behavior_binding *binding,
+                                struct zmk_behavior_binding_event event) {
+    ARG_UNUSED(event);
+    if (binding->param1 < 1 || binding->param1 > 4) { return -EINVAL; }
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+    cleave_pinnacle_sensitivity_request(binding->param1);
+    /* Sensor work and this response run serially on the system work queue. */
+    k_work_reschedule(&status_work, K_MSEC(50));
+#endif
+    return ZMK_BEHAVIOR_OPAQUE;
+}
+static const struct behavior_driver_api sensitivity_api = {
+    .binding_pressed = request_sensitivity, .locality = BEHAVIOR_LOCALITY_EVENT_SOURCE,
+};
+BEHAVIOR_DT_INST_DEFINE(0, NULL, NULL, NULL, NULL, POST_KERNEL,
+                        CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &sensitivity_api);

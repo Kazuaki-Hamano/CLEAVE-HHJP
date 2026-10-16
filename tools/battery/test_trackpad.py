@@ -13,6 +13,14 @@ def response(config=tp.Config(), flags=2, applied=1, save_error=0):
 
 
 class TrackpadProtocolTests(unittest.TestCase):
+    def test_native_split_wait_and_sensor_failure(self):
+        status = tp.decode(response(flags=1, applied=0))
+        status['transport'] = {'stage': 8}
+        self.assertIn('ZMK標準通信', tp.pending_message(status))
+        status['transport'] = {'stage': 9}
+        status['sensor_error'] = -5
+        self.assertIn('センサー設定でエラー', tp.pending_message(status))
+
     def test_submission_and_response_wait_are_distinct(self):
         status = tp.decode(response(flags=1, applied=0))
         status['transport'] = {'stage': 2}
