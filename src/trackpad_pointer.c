@@ -16,11 +16,25 @@ struct pointer_state {
     bool packet;
 };
 static struct pointer_state remote_pointer;
+static int32_t native_remainder;
+static uint32_t native_generation;
 static int pointer_process(const struct device *dev, struct input_event *event,
                            uint32_t p1, uint32_t p2,
                            struct zmk_input_processor_state *state) {
     ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(state);
     struct pointer_state *pointer = dev->data;
+    if (event->type == INPUT_EV_REL && event->code == INPUT_REL_WHEEL) {
+        struct cleave_trackpad_config cfg;
+        uint32_t generation;
+        cleave_trackpad_get(&cfg, &generation);
+        if (generation != native_generation) {
+            native_remainder = 0;
+            native_generation = generation;
+        }
+        event->value = trackpad_scale(event->value, cfg.native_scroll, 100,
+                                      &native_remainder);
+        return ZMK_INPUT_PROC_CONTINUE;
+    }
     if (event->type != INPUT_EV_REL ||
         (event->code != INPUT_REL_X && event->code != INPUT_REL_Y)) {
         return ZMK_INPUT_PROC_CONTINUE;

@@ -13,11 +13,13 @@ class Config:
     maximum: int = 300
     sensitivity: int = 1
     scroll: int = 100
+    native_scroll: int = 100
 
     def validate(self):
         if not (30 <= self.speed <= 800 and self.speed % 10 == 0 and 0 <= self.acceleration <= 300 and
                 100 <= self.maximum <= 800 and self.maximum % 10 == 0 and
-                self.sensitivity == 1 and 10 <= self.scroll <= 400 and self.scroll % 10 == 0):
+                self.sensitivity == 1 and 10 <= self.scroll <= 400 and self.scroll % 10 == 0 and
+                10 <= self.native_scroll <= 400 and self.native_scroll % 10 == 0):
             raise ValueError('設定値が範囲外です')
         return self
 
@@ -25,19 +27,20 @@ class Config:
 def encode(config, save=False):
     config.validate()
     result = bytearray(32)
-    result[:4] = bytes((7, 2, int(save), 0))
+    result[:4] = bytes((7, 3, int(save), 0))
     struct.pack_into('<HHHB', result, 4, config.speed, config.acceleration,
                      config.maximum, 1)
-    struct.pack_into('<H', result, 28, config.scroll)
+    struct.pack_into('<HH', result, 28, config.scroll, config.native_scroll)
     return bytes(result)
 
 
 def decode(data):
     data = bytes(data)
-    if len(data) != 32 or data[:2] != b'\x07\x02' or data[2] & ~7 or data[3]:
-        raise ValueError('タッチパッド設定に対応したファームウェアへ左右を更新してください')
+    if len(data) != 32 or data[:2] != b'\x07\x03' or data[2] & ~7 or data[3]:
+        raise ValueError('新しいタッチパッド設定に対応した左側ファームウェアへ更新してください')
     config = Config(*struct.unpack_from('<HHHB', data, 4),
-                    scroll=struct.unpack_from('<H', data, 28)[0]).validate()
+                    scroll=struct.unpack_from('<H', data, 28)[0],
+                    native_scroll=struct.unpack_from('<H', data, 30)[0]).validate()
     if data[11] > 4:
         raise ValueError('検出感度の応答が不正です')
     result = {'config': config, 'dirty': bool(data[2] & 1),
@@ -142,14 +145,14 @@ def open_window(parent, is_busy=lambda: False):
 
     window = tk.Toplevel(parent)
     window.title('CLEAVE タッチパッド設定')
-    window.geometry('620x480')
-    window.minsize(580, 440)
+    window.geometry('660x540')
+    window.minsize(620, 500)
     frame = ttk.Frame(window, padding=20)
     frame.pack(fill='both', expand=True)
     ttk.Label(frame, text='左側をUSB接続して調整します。変更はその場で反映されます。').pack(anchor='w')
     ttk.Label(frame, text='加速は指を動かす速さに応じて働きます。0%で加速なし。').pack(anchor='w', pady=(4, 16))
-    values = [tk.IntVar(value=v) for v in (200, 0, 300, 100)]
-    labels = [tk.StringVar() for _ in range(4)]
+    values = [tk.IntVar(value=v) for v in (200, 0, 300, 100, 100)]
+    labels = [tk.StringVar() for _ in range(5)]
     status_text = tk.StringVar(value='現在の設定を読み込んでいます…')
     tasks, results = queue.Queue(), queue.Queue()
     closed = threading.Event()
@@ -159,13 +162,14 @@ def open_window(parent, is_busy=lambda: False):
 
     def current():
         return Config(values[0].get(), values[1].get(), values[2].get(),
-                      scroll=values[3].get()).validate()
+                      scroll=values[3].get(), native_scroll=values[4].get()).validate()
 
     def refresh_labels():
         labels[0].set(f'{values[0].get()/100:.1f} 倍')
         labels[1].set(f'{values[1].get()} %')
         labels[2].set(f'{values[2].get()/100:.1f} 倍')
         labels[3].set(f'{values[3].get()/100:.1f} 倍')
+        labels[4].set(f'{values[4].get()/100:.1f} 倍')
 
     def queue_change():
         state['debounce'] = None
@@ -184,7 +188,8 @@ def open_window(parent, is_busy=lambda: False):
     for index, (title, low, high, step) in enumerate((('基本速度', 30, 800, 10),
                                                     ('加速の強さ', 0, 300, 1),
                                                     ('加速の最大倍率', 100, 800, 10),
-                                                    ('Fnスクロール量', 10, 400, 10))):
+                                                    ('左パッドスクロール量', 10, 400, 10),
+                                                    ('右端スクロール量', 10, 400, 10))):
         row = ttk.Frame(frame)
         row.pack(fill='x', pady=7)
         ttk.Label(row, text=title, width=17).pack(side='left')
@@ -194,7 +199,7 @@ def open_window(parent, is_busy=lambda: False):
         slider.pack(side='left')
         ttk.Label(row, textvariable=labels[index], width=10).pack(side='left', padx=8)
         controls.append(slider)
-    ttk.Label(frame, text='スクロール量の1.0倍は従来と同じ量です。検出感度は1x固定です。',
+    ttk.Label(frame, text='右端スクロール量の1.0倍はチップの出力と同じ量です。検出感度は1x固定です。',
               wraplength=530).pack(anchor='w', pady=4)
     ttk.Label(frame, textvariable=status_text, wraplength=530).pack(anchor='w', pady=12)
     buttons = ttk.Frame(frame)
@@ -210,7 +215,7 @@ def open_window(parent, is_busy=lambda: False):
     refresh_labels()
 
     window.update_idletasks()
-    window.geometry(f'{max(620, frame.winfo_reqwidth())}x{max(480, frame.winfo_reqheight())}')
+    window.geometry(f'{max(660, frame.winfo_reqwidth())}x{max(540, frame.winfo_reqheight())}')
 
     def worker():
         while not closed.is_set():
@@ -248,7 +253,7 @@ def open_window(parent, is_busy=lambda: False):
             if not state['ready']:
                 state['loading'] = True
                 c = status['config']
-                for variable, value in zip(values, (c.speed, c.acceleration, c.maximum, c.scroll)):
+                for variable, value in zip(values, (c.speed, c.acceleration, c.maximum, c.scroll, c.native_scroll)):
                     variable.set(value)
                 refresh_labels()
                 for control in controls:

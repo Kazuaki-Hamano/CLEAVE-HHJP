@@ -3,11 +3,12 @@
 #include <stdio.h>
 #include "../../src/trackpad_pointer.c"
 static int64_t now = 1000;
-static struct cleave_trackpad_config cfg = {30, 0, 300, 1, 100};
+static struct cleave_trackpad_config cfg = {30, 0, 300, 1, 100, 100};
+static uint32_t config_generation=1;
 int64_t k_uptime_get(void) { return now; }
 void cleave_trackpad_get(struct cleave_trackpad_config *out, uint32_t *generation) {
     *out = cfg;
-    *generation = 1;
+    *generation = config_generation;
 }
 static int move(struct device *dev, int x) {
     struct input_event e = {.type=INPUT_EV_REL, .code=INPUT_REL_X, .value=x};
@@ -62,6 +63,19 @@ int main(void) {
         pointer_api.handle_event(&right,&e,0,0,NULL);
         assert(e.code==INPUT_REL_WHEEL && e.value==wheel); /* Native wheel bypasses cursor gain. */
     }
+    cfg.native_scroll=50;config_generation++;
+    for(int i=0;i<4;i++) {
+        struct input_event e={.type=INPUT_EV_REL,.code=INPUT_REL_WHEEL,.value=1};
+        pointer_api.handle_event(&right,&e,0,0,NULL);
+        assert(e.value==(i%2)); /* Fractional wheel counts accumulate independently. */
+    }
+    struct input_event e={.type=INPUT_EV_REL,.code=INPUT_REL_WHEEL,.value=-1};
+    pointer_api.handle_event(&right,&e,0,0,NULL);assert(e.value==0);
+    e.value=-1;pointer_api.handle_event(&right,&e,0,0,NULL);assert(e.value==-1);
+    e.value=1;pointer_api.handle_event(&right,&e,0,0,NULL);assert(e.value==0);
+    cfg.native_scroll=200;config_generation++;
+    e.value=-1;pointer_api.handle_event(&right,&e,0,0,NULL);assert(e.value==-2);
+    cfg.native_scroll=100;config_generation++;
     local_packet(20,0,&h,&v);assert(navigation_count==0);
     local_packet(44,0,&h,&v);assert(navigation_count==1 && last_forward);
     for (int i=0;i<10;i++) local_packet(100,0,&h,&v);

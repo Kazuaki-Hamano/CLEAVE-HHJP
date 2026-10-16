@@ -49,24 +49,25 @@ class TrackpadProtocolTests(unittest.TestCase):
         self.assertIn('-12', tp.pending_message(status))
 
     def test_wire_offsets_and_padding(self):
-        config = tp.Config(280, 80, 450, scroll=230)
+        config = tp.Config(280, 80, 450, scroll=230, native_scroll=170)
         data = tp.encode(config, save=True)
-        self.assertEqual(data[:4], bytes([7, 2, 1, 0]))
+        self.assertEqual(data[:4], bytes([7, 3, 1, 0]))
         self.assertEqual(struct.unpack_from('<HHHB', data, 4), (280, 80, 450, 1))
         self.assertEqual(data[11:28], bytes(17))
         self.assertEqual(struct.unpack_from('<H', data, 28)[0], 230)
-        self.assertEqual(data[30:], bytes(2))
+        self.assertEqual(struct.unpack_from('<H', data, 30)[0], 170)
         self.assertEqual(tp.decode(response(config, applied=1))['config'], config)
 
     def test_invalid_values_rejected_before_io(self):
         for c in (tp.Config(0), tp.Config(801), tp.Config(acceleration=301),
                   tp.Config(275), tp.Config(maximum=99), tp.Config(maximum=455),
+                  tp.Config(native_scroll=0), tp.Config(native_scroll=405), tp.Config(native_scroll=115),
                   tp.Config(scroll=0), tp.Config(scroll=405), tp.Config(scroll=115),
                   tp.Config(sensitivity=2), tp.Config(sensitivity=0), tp.Config(sensitivity=5)):
             with self.assertRaises(ValueError): tp.encode(c)
 
     def test_old_or_corrupt_reports_rejected(self):
-        for data in (bytes(32), bytes([7, 1])+bytes(30), response()[:16]):
+        for data in (bytes(32), bytes([7, 1])+bytes(30), bytes([7, 2])+bytes(30), response()[:16]):
             with self.assertRaises(ValueError): tp.decode(data)
 
     def test_status_does_not_confuse_requested_with_applied(self):

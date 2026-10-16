@@ -92,13 +92,13 @@ Fn+Ctrl+1〜5は `BT_SEL 0`〜`BT_SEL 4`、Fn+Ctrl+Backspaceは `BT_CLR`。Ctrl�
 
 右側TM040040の移動と左右タップクリックをinput-splitで左側へ転送します。`cleave_hhjp_left.overlay`のlistenerはFnの有無にかかわらず`trackpad_speed`を適用します。Fn中の縦スクロール切り替えを削除し、マウスボタンキーを保持しながらカーソルを動かせるようにしました。ボタンイベントは変更しません。`trackpad_scroll`の旧processorは互換用の定義として残っていますがlistenerからは使用しません。
 
-右パッドはLANG2・旧LANG1長押しと専用Fnのいずれでもカーソル移動を継続します。旧マウスレイヤー、`src/mouse_speed.c`、専用behavior/scalerのbindingとCMake参照は削除しました。`src/trackpad_settings.c`でUSB Feature 7 version 2の変更・保存・固定感度1xの確認を行います。基本速度と最大倍率は0.1倍刻み、スクロール量は0.1～4.0倍です。旧保存値は引き継ぎ、感度を1x、スクロール量を1.0倍へ移行します。仕様と確認範囲は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。設定の反映・保存・再起動後の保持はユーザー確認済みです。スクロール量は使い心地に合わせて調整してください。
+右パッドはLANG2・旧LANG1長押しと専用Fnのいずれでもカーソル移動を継続します。旧マウスレイヤー、`src/mouse_speed.c`、専用behavior/scalerのbindingとCMake参照は削除しました。`src/trackpad_settings.c`でUSB Feature 7 version 3の変更・保存・固定感度1xの確認を行います。基本速度と最大倍率は0.1倍刻み、スクロール量は0.1～4.0倍です。旧保存値は引き継ぎ、感度を1x、スクロール量を1.0倍へ移行します。仕様と確認範囲は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。設定の反映・保存・再起動後の保持はユーザー確認済みです。スクロール量は使い心地に合わせて調整してください。
 
 ### UF2移行
 
 左パッドの役割は通常時の縦横スクロールとFn中の左右ナビゲーションです。`trackpad_local_control`はFnレイヤーを確認し、横64カウント以上・横成分が縦の2倍以上でスワイプ1回を確定します。180msの無移動、またはFn状態変更で判定を再開します。`trackpad_navigation.c`はZMKのConsumer AC Back / AC Forwardを30ms押して解放します。右側はFn中も速度・加速を適用してカーソルを動かします。
 
-`cleave_hhjp_trackpad_spi.dtsi`のSPI配線を左右で共有します。`trackpad_local_listener`は左ローカルの`trackpad_local_control`、`trackpad_listener`は右input-splitの速度processorを使います。右の加速履歴・端数と、左の軸別スクロール端数・ジェスチャー判定状態は独立しています。左側にも`CONFIG_SPI=y`とPinnacleドライバーがあり、アプリのHID version 2は維持します。両パッドの通常動作はユーザー確認済みで、今回のスクロール・スワイプは実機確認待ちです。
+`cleave_hhjp_trackpad_spi.dtsi`のSPI配線を左右で共有します。`trackpad_local_listener`は左ローカルの`trackpad_local_control`、`trackpad_listener`は右input-splitの速度processorを使います。右の加速履歴・端数と、左の軸別スクロール端数・ジェスチャー判定状態は独立しています。左側にも`CONFIG_SPI=y`とPinnacleドライバーがあり、アプリのHID version 3で左右スクロール量を別々に扱います。両パッドの通常動作はユーザー確認済みで、今回のスクロール・スワイプは実機確認待ちです。
 
 Fn+B（左）/ Fn+N（右）を2秒長押しすると、操作した側で `&bootloader` を呼びます。短押しはB / ＋。`boot_hold` は `tap-preferred` のhold-tapです。
 USBを対象側につなぎ、左右が通常動作・接続している状態で操作します。詳細は[キー操作の手順](bootloader-keys.md)を参照してください。
@@ -123,7 +123,7 @@ Studio保存済みの配置は `.keymap` の初期配置に優先します。新
 | 4 | 8（Windows送信時32） | ID=4、version=1、対象側、ASCII `BOOT`、ゼロ埋め |
 | 5 | 32 | 子機の更新対応情報キャッシュ |
 | 6 | 16 | 左側の診断情報：残量・電源状態・センサーのキャッシュ電圧/残量・valid flags・uptime・最終残量変化イベントからの経過秒 |
-| 7 | 32 | version=2、カーソル速度・加速・固定感度1x・Fnスクロール量の取得、変更、明示保存、通信診断 |
+| 7 | 32 | version=3、カーソル速度・加速・固定感度1x・左右スクロール量の取得、変更、明示保存、通信診断 |
 
 Windowsではcollection最大長32バイトでFeature Reportを読み、ID1/2は有効な7/6バイトを取り出します。ID4は8または32バイトを受け付け、余白はゼロのみです。
 診断用ID6も32バイトで読み、先頭16バイトを取り出します。`sensor_channel_get` で既存センサーのキャッシュを取得し、追加のADCサンプリングは行いません。取得できない値はflagsでunknownを表します。残量変化イベントの経過時間はADC計測の経過時間とは異なります。記録ツールは[診断手順](../tools/battery/README.md#sudden-battery-percentage-changes-diagnostics)を参照してください。
@@ -185,3 +185,5 @@ Studioの有効化は左側 `.conf` にあります。`firmware` artifact内の�
 ケース・配線・バッテリーの実装条件は[組み立てガイド](../build-guide/01-ASSEMBLY.md)と[ケース設計ガイド](../build-guide/03-2-CUSTOM_CASE.md)に従います。ソース確認だけでは寸法の適合、充電時間、電池持ち、実機の更新成功を証明しません。
 
 Fn＋Qは左クリック、Fn＋Eは右クリックです。キーを押している間はボタンを保持し、離すと解放します。FnとQを押したまま右パッドで移動し、Qを離すとドロップできます。最初の確認には専用Fnキーを使用し、LANG2・旧LANG1長押しの場合は200ms待ってからクリックキーを押します。
+
+右のチップ内蔵スクロールは正式採用です。`trackpad_speed`はINPUT_REL_WHEELに独立した右端倍率を適用します。右端倍率・左スクロール倍率はそれぞれ0.1～4.0倍、0.1倍刻み。HID Report 7は32バイトのままversion 3とし、byte28～29に左倍率、byte30～31に右端倍率を格納します。保存データはversion 3・12バイトで、v1/v2を移行します。左ファームウェアとアプリの更新で対応し、右は内蔵スクロール版を継続使用できます。

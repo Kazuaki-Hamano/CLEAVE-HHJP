@@ -46,6 +46,6 @@ for source, tokens in {
     for token in tokens:
         assert token in content, (source, token)
 assert 'trackpad_scroll' in design
-assert 'version 2' in design
+assert 'version 3' in design
 print('Documented source constants and 2 x 70 bindings: OK')
 raise SystemExit(bool(bad))
