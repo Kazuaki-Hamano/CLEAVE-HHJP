@@ -41,7 +41,7 @@
 		sensitivity = "1x";
 		y-invert; /* Match the installed pad's vertical direction to host coordinates. */
 		sleep;
-		no-taps;
+		/* Primary taps and the hardware secondary-tap zone are enabled. */
 	};
 };
 
