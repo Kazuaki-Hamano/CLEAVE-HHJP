@@ -5,6 +5,7 @@
 
 #include "cleave_hhjp.dtsi"
 #include "cleave_hhjp_trackpad.dtsi"
+#include "cleave_hhjp_trackpad_spi.dtsi"
 #include <input/processors.dtsi>
 
 &trackpad_listener {
@@ -21,6 +22,23 @@
 };
 
 / {
+	trackpad_local_listener: trackpad_local_listener {
+		compatible = "zmk,input-listener";
+		device = <&trackpad>;
+		input-processors = <&trackpad_local_speed>;
+		fn_scroll {
+			layers = <1>;
+			input-processors = <&trackpad_local_scroll>;
+		};
+	};
+	trackpad_local_speed: trackpad_local_speed {
+		compatible = "cleave,input-processor-trackpad";
+		#input-processor-cells = <0>;
+	};
+	trackpad_local_scroll: trackpad_local_scroll {
+		compatible = "cleave,input-processor-trackpad";
+		#input-processor-cells = <0>;
+	};
 	trackpad_speed: trackpad_speed {
 		compatible = "cleave,input-processor-trackpad";
 		#input-processor-cells = <0>;
