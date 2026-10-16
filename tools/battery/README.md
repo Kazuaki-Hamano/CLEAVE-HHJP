@@ -67,12 +67,12 @@ embedded CLEAVE left/right identity. Generic, settings-reset, bootloader, and
 older unmarked images are rejected. The validated bytes are held in memory.
 
 Initial installation: choose a right update-enabled UF2 (the local prepared
-copy is `output/firmware/bc546789/`'s right UF2), explicitly select
+copy is `output/firmware/89ab7a5c/`'s right UF2), explicitly select
 **キー操作で更新モードへ入れる** checked, click Start, then connect the right
 half to USB and hold Fn+N for two seconds. The app detects and copies to the
 new UF2 drive. After it disappears, reconnect the parent to USB for verification.
 Then repeat for the left update-enabled UF2 (local copy:
-`output/firmware/bc546789/`'s left UF2) with Fn+B.
+`output/firmware/89ab7a5c/`'s left UF2) with Fn+B.
 These firmware artifacts are saved locally, not distributed by Git;
 Actions artifact filenames differ. The embedded marker determines the side.
 Before clicking Start, both halves must be in normal mode (no UF2 drive).
