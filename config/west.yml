@@ -12,5 +12,8 @@ manifest:
     - name: zmk-rgbled-widget
       remote: caksoylar
       revision: v0.3
+    - name: cirque-input-module
+      url: https://github.com/petejohanson/cirque-input-module
+      revision: 0de55f36bc720b5be3d8880dc856d4d78baf5214
   self:
     path: config

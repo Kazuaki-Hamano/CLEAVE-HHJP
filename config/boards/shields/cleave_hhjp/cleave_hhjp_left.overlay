@@ -4,6 +4,11 @@
  */
 
 #include "cleave_hhjp.dtsi"
+#include "cleave_hhjp_trackpad.dtsi"
+
+&trackpad_listener {
+	status = "okay";
+};
 
 &kscan0 {
 	col-gpios
