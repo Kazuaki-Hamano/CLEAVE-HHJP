@@ -24,10 +24,14 @@ Fn（LANG2長押し・左右の専用Fn）中は縦スクロール専用です�
 左側のUSB vendor HID Feature Report 7（ID込み32バイト）を使用します。既存レポート1～6と最大バッファ長は維持します。
 
 - SET: `[7, 1, command, 0, speed_u16, acceleration_u16, maximum_u16, sensitivity_u8, zero...]`。整数はlittle-endian、倍率は百分率。commandは0=RAM反映、1=反映して保存。
-- GET: `[7, 1, flags, 0, speed_u16, acceleration_u16, maximum_u16, desired_u8, applied_u8, sensor_error_i8, save_error_i8, generation_u16, zero...]`。
+- GET: `[7, 1, flags, 0, speed_u16, acceleration_u16, maximum_u16, desired_u8, applied_u8, sensor_error_i8, save_error_i8, generation_u16, diagnostics...]`。
 - flags: bit0=保存値との差分あり、bit1=右側の感度反映確認済み、bit2=保存処理中。右側の結果は最終取得から5秒で失効します。
 - 設定保存キー: `cleave_trackpad/config`。バージョン1と7バイトの設定値を保存。
 - 左右間GATTサービス: `b6f4a630-3790-4c3c-934d-911d84233b10`、値:末尾ではなく先頭32ビットが`b6f4a631`。左は要求感度、右は適用感度と結果を返し、相互に約1秒間隔で取得します。
+
+診断情報はbyte16が1の場合に有効です。byte17=通信段階、18=暗号化レベル、19=ATTエラー、20～21=送信APIの戻り値（符号付きLE16）、22=応答長、24～25=試行回数、26～27=応答回数です。通信段階は0=未接続、1=暗号化待ち、2=送信API内、3=送信エラー、4=ATTエラー、5=応答形式不一致、6=正常応答、7=送信API成功後の応答待ちです。byte16が0の旧版でも基本設定の形式は同じです。
+
+GATTのバッファ確保は待機する可能性があるため、感度・充電状態・更新情報の定期取得は専用の`cleave_peer_work_q`で実行します。キーボード共通のsystem work queue上では取得しません。
 
 速度は各パケットのX/Yからユークリッド距離を整数で計算し、経過時間で「10ms当たりの移動量」に正規化します。直近速度を平滑化し、次のパケットの両軸に同じ倍率を適用します。加速倍率（百分率）は`min(最大倍率, 100 + 加速の強さ × 速度 / 10)`。最終倍率は基本速度との積です。150ms以上入力が途切れたら加速履歴をリセットし、小数の移動量は端数を蓄積します。
 
