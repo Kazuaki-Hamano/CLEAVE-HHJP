@@ -20,9 +20,9 @@ with zipfile.ZipFile(root / 'build-logs.zip') as logs:
         bindings = [' '.join(binding.split()) for binding in re.findall(r'&[^&]+', match.group(1))]
         assert len(bindings) == 70
         assert bindings[60] == '&lt 0x1 0x7008b', bindings[60]
-        assert bindings[63] == '&kp 0x7008a', bindings[63]
+        assert bindings[63] == '&lt 0x1 0x7008a', bindings[63]
         assert bindings[64] == '&kp 0x70090', bindings[64]
         assert 'tapping-term-ms = < 0xc8 >;' in dts
-        print(name, 'INT5/Fn, INT4, Kana LANG1 and 200ms hold-tap: PASS', firmware.build)
+        print(name, 'INT5/Fn, INT4/Fn, Kana LANG1 and 200ms hold-tap: PASS', firmware.build)
 assert builds['left'] == builds['right']
-(root / 'keymap-verification.json').write_text(json.dumps({'builds': builds, 'positions': {'60': 'INT5/Fn', '63': 'INT4', '64': 'LANG1/Kana'}, 'verified': True}, indent=2), encoding='utf-8')
+(root / 'keymap-verification.json').write_text(json.dumps({'builds': builds, 'positions': {'60': 'INT5/Fn', '63': 'INT4/Fn', '64': 'LANG1/Kana'}, 'verified': True}, indent=2), encoding='utf-8')

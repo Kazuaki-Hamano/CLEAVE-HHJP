@@ -34,7 +34,7 @@ for layer in ('default_layer', 'fn_layer'):
     assert bindings.count('&') == 70, layer
     assert layer in design
 assert 'mouse_layer {' not in keymap
-assert '&kp INT4' in keymap
+assert '&lt 1 INT4' in keymap
 for source, tokens in {
     'config/boards/shields/cleave_hhjp/cleave_hhjp_left.conf': ['CONFIG_ZMK_POINTING=y', 'CONFIG_USB_HID_DEVICE_COUNT=2', 'CONFIG_ZMK_STUDIO_LOCKING=n'],
     'config/west.yml': ['revision: v0.3-branch', 'revision: v0.3'],

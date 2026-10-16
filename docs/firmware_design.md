@@ -84,7 +84,7 @@ RGB LEDの定義はこのdtsiにはなく、boardと `rgbled_adapter` モジュ�
 | 0 | `default_layer` / Default | HHKB JPベースの通常入力 |
 | 1 | `fn_layer` / Fn | F1〜F12、音量・ミュート・Eject、ナビゲーション、Bluetooth、UF2移行 |
 
-左右の専用Fnキーは `&mo 1`。左の旧LANG2位置は `&lt 1 INT5`、右Space直後の旧LANG1位置は通常の `&kp INT4` です。LANG2は短押しでInternational5、200msのhold-tap判定後はFnになります。隣の独立したKana位置は従来の `&kp LANG1` です。右側の並びはINT4、Kana、Alt、Fnです。`&lt` は `tap-preferred` で、別キーを押しただけでは即座にhold確定しません。Mouseレイヤーは削除しました。
+左右の専用Fnキーは `&mo 1`。左の旧LANG2位置は `&lt 1 INT5`、右Space直後の旧LANG1位置は `&lt 1 INT4` です。短押しはそれぞれInternational5/International4、200msのhold-tap判定後は両方ともFnになります。隣の独立したKana位置は従来の `&kp LANG1` です。右側の並びはINT4/Fn、Kana、Alt、Fnです。`&lt` は `tap-preferred` で、別キーを押しただけでは即座にhold確定しません。Mouseレイヤーは削除しました。
 
 Fn+Ctrl+1〜5は `BT_SEL 0`〜`BT_SEL 4`、Fn+Ctrl+Backspaceは `BT_CLR`。CtrlなしではF1〜F5 / Deleteです。`zmk,behavior-mod-morph` で実装しています。
 

@@ -151,7 +151,7 @@ GitHub上で直接ファイルを編集する場合は、Gitのコマンド操�
 
 ### キーマップ変更の考え方
 
-キーマップは`config/cleave_hhjp.keymap`の`keymap`ノード内で定義されています。このフォークには`default_layer`と`fn_layer`の2レイヤーがあります。LANG2の200ms長押し、または専用FnキーでFnを使います。旧マウスレイヤーは削除され、右Space直後のキーは通常のINT4です。Fn中のパッド上下操作はスクロールになります。詳細は[基本操作](04-USAGE.md#基本操作)と[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。
+キーマップは`config/cleave_hhjp.keymap`の`keymap`ノード内で定義されています。このフォークには`default_layer`と`fn_layer`の2レイヤーがあります。LANG2・右Space直後の旧LANG1位置の200ms長押し、または専用FnキーでFnを使います。旧マウスレイヤーは削除済みです。右Space直後の短押しはINT4、隣のKanaはLANG1を送ります。詳細は[基本操作](04-USAGE.md#基本操作)と[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。
 
 主な記法は以下の通りです。
 
