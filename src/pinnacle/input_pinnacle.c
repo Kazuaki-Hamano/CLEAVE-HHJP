@@ -507,7 +507,7 @@ static int pinnacle_init(const struct device *dev) {
         LOG_DBG("Default sleep interval %d", packet[0]);
     }
 
-    ret = pinnacle_write(dev, PINNACLE_SLEEP_INTERVAL, 255);
+    ret = pinnacle_write(dev, PINNACLE_SLEEP_INTERVAL, 50);
     if (ret <= 0) {
         LOG_DBG("Failed to update sleep interaval %d", ret);
     }
