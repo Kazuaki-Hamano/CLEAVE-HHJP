@@ -16,6 +16,14 @@ static struct bt_uuid_128 value_uuid = BT_UUID_INIT_128(TP_VALUE);
 static struct k_spinlock cfg_lock;
 static struct cleave_trackpad_config config = {200, 0, 300, 1};
 static uint32_t generation = 1;
+/* Diagnostic fields are exported in previously reserved bytes of Report 7. */
+static atomic_t transport_stage;
+static atomic_t transport_security;
+static atomic_t transport_submit_error;
+static atomic_t transport_att_error;
+static atomic_t transport_length;
+static atomic_t transport_attempts;
+static atomic_t transport_completions;
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 static struct cleave_trackpad_config saved = {200, 0, 300, 1};
 static uint8_t peer_sensitivity;
@@ -120,6 +128,14 @@ void cleave_trackpad_report(uint8_t *out) {
     out[13] = save_error;
     sys_put_le16(generation, out + 14);
     k_spin_unlock(&cfg_lock, key);
+    out[16] = 1;
+    out[17] = atomic_get(&transport_stage);
+    out[18] = atomic_get(&transport_security);
+    out[19] = atomic_get(&transport_att_error);
+    sys_put_le16((int16_t)atomic_get(&transport_submit_error), out + 20);
+    out[22] = atomic_get(&transport_length);
+    sys_put_le16(atomic_get(&transport_attempts), out + 24);
+    sys_put_le16(atomic_get(&transport_completions), out + 26);
 }
 #else
 /* The driver serializes changes with packet reads on the system work queue. */
@@ -154,7 +170,12 @@ static struct bt_gatt_read_params read_params;
 static uint8_t read_done(struct bt_conn *conn, uint8_t err,
                          struct bt_gatt_read_params *params, const void *data, uint16_t len) {
     ARG_UNUSED(conn); ARG_UNUSED(params);
+    atomic_inc(&transport_completions);
+    atomic_set(&transport_att_error, err);
+    atomic_set(&transport_length, len);
+    atomic_set(&transport_stage, err ? 4 : 5);
     if (!err && data && len == 3 && ((const uint8_t *)data)[0] == 1) {
+        atomic_set(&transport_stage, 6);
         const uint8_t *v = data;
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
         k_spinlock_key_t key = k_spin_lock(&cfg_lock);
@@ -177,12 +198,20 @@ static void poll_peer(struct bt_conn *conn, void *user) {
 #else
         info.role != BT_CONN_ROLE_PERIPHERAL ||
 #endif
-        bt_conn_get_security(conn) < BT_SECURITY_L2 || !atomic_cas(&read_pending, 0, 1)) {
+        false) {
         return;
     }
+    bt_security_t security = bt_conn_get_security(conn);
+    atomic_set(&transport_security, security);
+    if (security < BT_SECURITY_L2) { atomic_set(&transport_stage, 1); return; }
+    if (!atomic_cas(&read_pending, 0, 1)) { return; }
+    atomic_inc(&transport_attempts);
+    atomic_set(&transport_stage, 2);
     read_params = (struct bt_gatt_read_params){.func = read_done, .handle_count = 0,
         .by_uuid = {.start_handle = 1, .end_handle = 0xffff, .uuid = &value_uuid.uuid}};
-    if (bt_gatt_read(conn, &read_params)) { atomic_clear(&read_pending); }
+    int err = bt_gatt_read(conn, &read_params);
+    atomic_set(&transport_submit_error, err);
+    if (err) { atomic_set(&transport_stage, 3); atomic_clear(&read_pending); }
 }
 static void poll(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(poll_work, poll);

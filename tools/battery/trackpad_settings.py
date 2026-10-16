@@ -36,11 +36,41 @@ def decode(data):
     config = Config(*struct.unpack_from('<HHHB', data, 4)).validate()
     if data[11] > 4:
         raise ValueError('検出感度の応答が不正です')
-    return {'config': config, 'dirty': bool(data[2] & 1),
+    result = {'config': config, 'dirty': bool(data[2] & 1),
             'applied': bool(data[2] & 2), 'saving': bool(data[2] & 4),
             'sensor_sensitivity': data[11],
             'sensor_error': struct.unpack_from('b', data, 12)[0],
             'save_error': struct.unpack_from('b', data, 13)[0]}
+    if data[16] == 1:
+        result['transport'] = {
+            'stage': data[17], 'security': data[18], 'att_error': data[19],
+            'submit_error': struct.unpack_from('<h', data, 20)[0], 'length': data[22],
+            'attempts': struct.unpack_from('<H', data, 24)[0],
+            'completions': struct.unpack_from('<H', data, 26)[0]}
+    return result
+
+
+def pending_message(status):
+    transport = status.get('transport', {})
+    stage = transport.get('stage')
+    if stage == 0:
+        return '右側との接続を確認できません。右側の電源と通常キーの動作を確認してください。'
+    if stage == 1:
+        return f'左右間の暗号化を待っています（security={transport["security"]}）。'
+    if stage == 3:
+        return f'右側への通信を開始できません（エラー {transport["submit_error"]}）。'
+    if stage == 4:
+        error = transport['att_error']
+        if error == 0x0a:
+            return '右側に設定用の通信項目が見つかりません。右側のファームウェア更新を確認してください。'
+        return f'右側との通信に失敗しました（ATTエラー 0x{error:02x}）。'
+    if stage == 5:
+        return f'右側の応答形式が一致しません（{transport["length"]}バイト）。左右の更新を確認してください。'
+    if status.get('sensor_sensitivity') and status.get('sensor_error'):
+        return f'右側のセンサー設定でエラーが発生しました（{status["sensor_error"]}）。'
+    if status.get('sensor_error') and not status.get('sensor_sensitivity') and stage is None:
+        return '右側の設定応答を取得できません。左右のファームウェア更新と右側の動作を確認してください。'
+    return '速度は反映済み。検出感度の右側への反映を待っています…'
 
 
 def connect():
@@ -225,7 +255,7 @@ def open_window(parent, is_busy=lambda: False):
             elif status['save_error']:
                 status_text.set('保存に失敗しました。もう一度保存してください。')
             elif not status['applied']:
-                status_text.set('速度は反映済み。検出感度の右側への反映を待っています…')
+                status_text.set(pending_message(status))
             else:
                 status_text.set('反映済み・未保存' if status['dirty'] else '反映済み・保存状態と一致')
         status = state['last']

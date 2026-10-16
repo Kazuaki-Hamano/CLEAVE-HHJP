@@ -13,6 +13,26 @@ def response(config=tp.Config(), flags=2, applied=1, save_error=0):
 
 
 class TrackpadProtocolTests(unittest.TestCase):
+    def test_transport_diagnostics_and_missing_characteristic(self):
+        data = bytearray(response(flags=1))
+        data[16:23] = bytes([1, 4, 2, 10, 0, 0, 0])
+        struct.pack_into('<HH', data, 24, 17, 17)
+        status = tp.decode(data)
+        self.assertEqual(status['transport']['attempts'], 17)
+        self.assertIn('右側のファームウェア更新', tp.pending_message(status))
+
+    def test_old_firmware_error_is_not_endless_generic_wait(self):
+        status = tp.decode(response(flags=1, applied=0))
+        status['sensor_error'] = -128
+        self.assertIn('取得できません', tp.pending_message(status))
+
+    def test_transport_failure_and_security_wait_are_distinct(self):
+        status = tp.decode(response(flags=1, applied=0))
+        status['transport'] = {'stage': 1, 'security': 1}
+        self.assertIn('暗号化', tp.pending_message(status))
+        status['transport'] = {'stage': 3, 'submit_error': -12}
+        self.assertIn('-12', tp.pending_message(status))
+
     def test_wire_offsets_and_padding(self):
         config = tp.Config(275, 80, 450, 3)
         data = tp.encode(config, save=True)
