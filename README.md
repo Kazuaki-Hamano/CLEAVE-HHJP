@@ -21,6 +21,7 @@
 - [Windowsバッテリーアプリと更新手順](tools/battery/README.md)
 - [キー操作によるUF2モード移行](docs/bootloader-keys.md)
 - [タッチパッド設定](tools/battery/trackpad-settings.md)
+- [TM040040タッチパッド取り付けガイド](build-guide/06-TRACKPAD.md)
 - [生成物の保存場所](docs/generated-output.md)
 - [ケース設計ツール](tools/case-design/README.md)
 
