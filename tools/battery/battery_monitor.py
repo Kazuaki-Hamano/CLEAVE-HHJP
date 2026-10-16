@@ -138,11 +138,13 @@ def main():
     current_state = {}
     updating = {'busy': False}
     updater_window = {'window': None}
+    trackpad_window = {'window': None}
     pending_updates = {}
     icon = pystray.Icon('CLEAVE Battery', picture(), 'CLEAVE：接続を確認しています…',
         menu=pystray.Menu(
             pystray.MenuItem('残量ウィンドウを開く', lambda: commands.put('show'), default=True),
             pystray.MenuItem('ファームウェア更新', lambda: commands.put('firmware')),
+            pystray.MenuItem('タッチパッド設定', lambda: commands.put('trackpad')),
             pystray.MenuItem('終了', lambda: commands.put('quit'))))
 
     def handle_commands():
@@ -157,6 +159,16 @@ def main():
                 return
             if command == 'firmware':
                 open_updater()
+                continue
+            if command == 'trackpad':
+                previous = trackpad_window['window']
+                if previous is not None and previous.winfo_exists():
+                    previous.deiconify()
+                    previous.lift()
+                else:
+                    import trackpad_settings
+                    trackpad_window['window'] = trackpad_settings.open_window(
+                        window, lambda: updating['busy'])
                 continue
             window.deiconify()
             window.lift()

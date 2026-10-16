@@ -6,6 +6,9 @@ on:
     paths:
       - 'config/**'
       - 'src/**'
+      - 'dts/**'
+      - 'zephyr/**'
+      - 'Kconfig'
       - 'tools/battery/**'
       - 'CMakeLists.txt'
       - 'build.yaml'
@@ -14,6 +17,9 @@ on:
     paths:
       - 'config/**'
       - 'src/**'
+      - 'dts/**'
+      - 'zephyr/**'
+      - 'Kconfig'
       - 'tools/battery/**'
       - 'CMakeLists.txt'
       - 'build.yaml'

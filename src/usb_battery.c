@@ -13,6 +13,7 @@
 #include <zmk/events/split_peripheral_status_changed.h>
 #include "charge_status.h"
 #include "app_update.h"
+#include "trackpad_settings.h"
 
 /* Vendor collection: read-only feature report, independent of keyboard/mouse HID.
  * ID, version, central %, peripheral %, peripheral-valid, age in seconds (LE).
@@ -28,7 +29,9 @@ static const uint8_t descriptor[] = {
     0x85, 0x04, 0x09, 0x05, 0x95, 0x07, 0xb1, 0x02,
     0x85, 0x05, 0x09, 0x06, 0x95, 0x1f, 0xb1, 0x02,
     /* Read-only cached battery diagnostics; never triggers an ADC sample. */
-    0x85, 0x06, 0x09, 0x07, 0x95, 0x0f, 0xb1, 0x02, 0xc0,
+    0x85, 0x06, 0x09, 0x07, 0x95, 0x0f, 0xb1, 0x02,
+    /* Trackpad configuration: 32-byte GET/SET, keeps collection maximum unchanged. */
+    0x85, 0x07, 0x09, 0x08, 0x95, 0x1f, 0xb1, 0x02, 0xc0,
 };
 static struct k_spinlock state_lock;
 static uint8_t right_level;
@@ -38,6 +41,7 @@ static uint8_t report[7];
 static uint8_t power_report[6];
 static uint8_t update_report[CLEAVE_UPDATE_INFO_SIZE];
 static uint8_t diagnostic_report[16];
+static uint8_t trackpad_report[CLEAVE_TRACKPAD_REPORT_SIZE];
 static int64_t local_changed;
 static bool local_seen;
 
@@ -80,6 +84,12 @@ static void battery_diagnostics(void) {
 static int get_report(const struct device *dev, struct usb_setup_packet *setup,
                       int32_t *len, uint8_t **data) {
     ARG_UNUSED(dev);
+    if (setup->wValue == 0x0307) {
+        cleave_trackpad_report(trackpad_report);
+        *data = trackpad_report;
+        *len = sizeof(trackpad_report);
+        return 0;
+    }
     if (setup->wValue == 0x0306) {
         battery_diagnostics();
         *data = diagnostic_report;
@@ -152,6 +162,9 @@ ZMK_SUBSCRIPTION(cleave_usb_battery, zmk_split_peripheral_status_changed);
 static int set_report(const struct device *dev, struct usb_setup_packet *setup,
                       int32_t *len, uint8_t **data) {
     ARG_UNUSED(dev);
+    if (setup->wValue == 0x0307) {
+        return cleave_trackpad_command(*data, *len);
+    }
     if (setup->wValue != 0x0304 || (*len != 8 && *len != 32) || (*data)[0] != 4 || (*data)[1] != 1 ||
         (*data)[2] > 1 || memcmp(*data + 3, "BOOT", 4) != 0 || (*data)[7] != 0) {
         return -EINVAL;

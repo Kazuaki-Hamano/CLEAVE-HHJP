@@ -5,9 +5,28 @@
 
 #include "cleave_hhjp.dtsi"
 #include "cleave_hhjp_trackpad.dtsi"
+#include <input/processors.dtsi>
 
 &trackpad_listener {
 	status = "okay";
+	input-processors = <&trackpad_speed>;
+
+	/* Fn (LANG2 hold or either dedicated Fn): vertical scrolling only.
+	 * Suppress X drift, scale Y with fractional remainders, then map to wheel.
+	 * Pointer-up is negative Y; wheel-up is positive. */
+	fn_scroll {
+		layers = <1>;
+		input-processors = <&zip_x_scaler 0 1>,
+			<&zip_y_scaler (-1) 16>,
+			<&zip_xy_to_scroll_mapper>;
+	};
+};
+
+/ {
+	trackpad_speed: trackpad_speed {
+		compatible = "cleave,input-processor-trackpad";
+		#input-processor-cells = <0>;
+	};
 };
 
 &kscan0 {
