@@ -90,15 +90,15 @@ Fn+Ctrl+1〜5は `BT_SEL 0`〜`BT_SEL 4`、Fn+Ctrl+Backspaceは `BT_CLR`。Ctrl�
 
 ### タッチパッド
 
-右側TM040040の移動と左右タップクリックをinput-splitで左側へ転送します。`cleave_hhjp_left.overlay`のlistenerはFnレイヤー1で`trackpad_scroll`を適用し、横移動を抑制して縦スクロールに変換します。`src/trackpad_pointer.c`で`-Y × スクロール倍率 / 16`を計算し、端数を保持します。1.0倍は従来と同量です。ボタンイベントは変更しません。通常レイヤーではカーソル速度と加速を適用します。
+右側TM040040の移動と左右タップクリックをinput-splitで左側へ転送します。`cleave_hhjp_left.overlay`のlistenerはFnの有無にかかわらず`trackpad_speed`を適用します。Fn中の縦スクロール切り替えを削除し、マウスボタンキーを保持しながらカーソルを動かせるようにしました。ボタンイベントは変更しません。`trackpad_scroll`の旧processorは互換用の定義として残っていますがlistenerからは使用しません。
 
-LANG2長押しと専用Fnキーのどちらでもスクロールになります。旧マウスレイヤー、`src/mouse_speed.c`、専用behavior/scalerのbindingとCMake参照は削除しました。`src/trackpad_settings.c`でUSB Feature 7 version 2の変更・保存・固定感度1xの確認を行います。基本速度と最大倍率は0.1倍刻み、スクロール量は0.1～4.0倍です。旧保存値は引き継ぎ、感度を1x、スクロール量を1.0倍へ移行します。仕様と確認範囲は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。設定の反映・保存・再起動後の保持はユーザー確認済みです。スクロール量は使い心地に合わせて調整してください。
+右パッドはLANG2・旧LANG1長押しと専用Fnのいずれでもカーソル移動を継続します。旧マウスレイヤー、`src/mouse_speed.c`、専用behavior/scalerのbindingとCMake参照は削除しました。`src/trackpad_settings.c`でUSB Feature 7 version 2の変更・保存・固定感度1xの確認を行います。基本速度と最大倍率は0.1倍刻み、スクロール量は0.1～4.0倍です。旧保存値は引き継ぎ、感度を1x、スクロール量を1.0倍へ移行します。仕様と確認範囲は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。設定の反映・保存・再起動後の保持はユーザー確認済みです。スクロール量は使い心地に合わせて調整してください。
 
 ### UF2移行
 
-左パッドの役割は通常時の縦横スクロールとFn中の左右ナビゲーションです。`trackpad_local_control`はFnレイヤーを確認し、横64カウント以上・横成分が縦の2倍以上でスワイプ1回を確定します。180msの無移動、またはFn状態変更で判定を再開します。`trackpad_navigation.c`はZMKのConsumer AC Back / AC Forwardを30ms押して解放します。右側の速度・加速・Fn縦スクロールは変更しません。
+左パッドの役割は通常時の縦横スクロールとFn中の左右ナビゲーションです。`trackpad_local_control`はFnレイヤーを確認し、横64カウント以上・横成分が縦の2倍以上でスワイプ1回を確定します。180msの無移動、またはFn状態変更で判定を再開します。`trackpad_navigation.c`はZMKのConsumer AC Back / AC Forwardを30ms押して解放します。右側はFn中も速度・加速を適用してカーソルを動かします。
 
-`cleave_hhjp_trackpad_spi.dtsi`のSPI配線を左右で共有します。`trackpad_local_listener`は左ローカルの`trackpad_local_control`、`trackpad_listener`は右input-splitの速度・Fnスクロールprocessorを使います。右の加速履歴・端数と、左の軸別スクロール端数・ジェスチャー判定状態は独立しています。左側にも`CONFIG_SPI=y`とPinnacleドライバーがあり、アプリのHID version 2は維持します。両パッドの通常動作はユーザー確認済みで、今回のスクロール・スワイプは実機確認待ちです。
+`cleave_hhjp_trackpad_spi.dtsi`のSPI配線を左右で共有します。`trackpad_local_listener`は左ローカルの`trackpad_local_control`、`trackpad_listener`は右input-splitの速度processorを使います。右の加速履歴・端数と、左の軸別スクロール端数・ジェスチャー判定状態は独立しています。左側にも`CONFIG_SPI=y`とPinnacleドライバーがあり、アプリのHID version 2は維持します。両パッドの通常動作はユーザー確認済みで、今回のスクロール・スワイプは実機確認待ちです。
 
 Fn+B（左）/ Fn+N（右）を2秒長押しすると、操作した側で `&bootloader` を呼びます。短押しはB / ＋。`boot_hold` は `tap-preferred` のhold-tapです。
 USBを対象側につなぎ、左右が通常動作・接続している状態で操作します。詳細は[キー操作の手順](bootloader-keys.md)を参照してください。
@@ -183,3 +183,5 @@ Studioの有効化は左側 `.conf` にあります。`firmware` artifact内の�
 - 更新機能は右→左で実機確認し、再起動後のビルド一致を確認する
 
 ケース・配線・バッテリーの実装条件は[組み立てガイド](../build-guide/01-ASSEMBLY.md)と[ケース設計ガイド](../build-guide/03-2-CUSTOM_CASE.md)に従います。ソース確認だけでは寸法の適合、充電時間、電池持ち、実機の更新成功を証明しません。
+
+Fn＋Qは左クリック、Fn＋Eは右クリックです。キーを押している間はボタンを保持し、離すと解放します。FnとQを押したまま右パッドで移動し、Qを離すとドロップできます。最初の確認には専用Fnキーを使用し、LANG2・旧LANG1長押しの場合は200ms待ってからクリックキーを押します。

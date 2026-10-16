@@ -12,13 +12,8 @@
 	status = "okay";
 	input-processors = <&trackpad_speed>;
 
-	/* Fn (LANG2 hold or either dedicated Fn): vertical scrolling only.
-	 * Suppress X drift, scale Y with fractional remainders, then map to wheel.
-	 * Pointer-up is negative Y; wheel-up is positive. */
-	fn_scroll {
-		layers = <1>;
-		input-processors = <&trackpad_scroll>;
-	};
+	/* Keep cursor movement available while Fn mouse buttons are held.
+	 * Scrolling is handled by the left trackpad. */
 };
 
 / {

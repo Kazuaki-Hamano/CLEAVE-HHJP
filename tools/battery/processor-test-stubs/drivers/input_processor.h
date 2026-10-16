@@ -8,6 +8,7 @@ struct zmk_input_processor_driver_api {
                         struct zmk_input_processor_state *);
 };
 #define INPUT_EV_REL 2
+#define INPUT_EV_KEY 1
 #define INPUT_REL_X 0
 #define INPUT_REL_Y 1
 #define INPUT_REL_WHEEL 8

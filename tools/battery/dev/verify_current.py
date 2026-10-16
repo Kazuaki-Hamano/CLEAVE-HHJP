@@ -23,6 +23,13 @@ with zipfile.ZipFile(root / 'build-logs.zip') as logs:
         assert bindings[63] == '&lt 0x1 0x7008a', bindings[63]
         assert bindings[64] == '&kp 0x70090', bindings[64]
         assert 'tapping-term-ms = < 0xc8 >;' in dts
+        fn_match = re.search(r'fn_layer\s*\{.*?bindings\s*=\s*<(.*?)>;', dts, re.S)
+        fn_bindings = [' '.join(binding.split()) for binding in re.findall(r'&[^&]+', fn_match.group(1))]
+        assert fn_bindings[16] == '&mkp 0x1', fn_bindings[16]
+        assert fn_bindings[18] == '&mkp 0x2', fn_bindings[18]
+        if name == 'left':
+            assert not re.search(r'fn_scroll\s*\{', dts), 'Fn must preserve right pointer movement'
+
         print(name, 'INT5/Fn, INT4/Fn, Kana LANG1 and 200ms hold-tap: PASS', firmware.build)
 assert builds['left'] == builds['right']
 (root / 'keymap-verification.json').write_text(json.dumps({'builds': builds, 'positions': {'60': 'INT5/Fn', '63': 'INT4/Fn', '64': 'LANG1/Kana'}, 'verified': True}, indent=2), encoding='utf-8')

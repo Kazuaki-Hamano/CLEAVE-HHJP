@@ -52,6 +52,11 @@ int main(void) {
     right.data=&remote_scroll;
     assert(scroll(&right)==0 && scroll(&right)==1);
     fn=true;
+    right.data=&remote_pointer;
+    assert(move(&right,10)==3); /* Fn must not suppress right cursor movement. */
+    struct input_event button={.type=INPUT_EV_KEY,.code=1,.value=1,.sync=true};
+    pointer_api.handle_event(&right,&button,0,0,NULL);
+    assert(button.type==INPUT_EV_KEY && button.code==1 && button.value==1);
     local_packet(20,0,&h,&v);assert(navigation_count==0);
     local_packet(44,0,&h,&v);assert(navigation_count==1 && last_forward);
     for (int i=0;i<10;i++) local_packet(100,0,&h,&v);
