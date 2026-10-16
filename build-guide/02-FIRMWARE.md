@@ -16,6 +16,8 @@ CLEAVE HHJPはファームウェアをダウンロードし、左右それぞれ
 
 [ファームウェアのダウンロードページ](https://github.com/Rimebeck/Cleave-HHJP/releases)から最新バージョンの以下のUF2ファイルをダウンロードしてください。
 
+これは標準配布版の入手先です。このフォークのマウス・残量/充電状態アプリ・更新機能を使う場合は、このリポジトリのActionsから左右用UF2を取得してください（[カスタマイズ手順](05-CUSTOMIZE.md#ビルドしてuf2をダウンロードする)）。標準配布版がこれらの機能を含むとは限りません。
+
 - `settings_reset-seeeduino_xiao_ble-zmk.uf2`
 - `cleave_hhjp_left rgbled_adapter-seeeduino_xiao_ble-zmk.uf2`
 - `cleave_hhjp_right rgbled_adapter-seeeduino_xiao_ble-zmk.uf2`
@@ -35,9 +37,13 @@ XIAO nRF52840 Plusをブートローダーモードにすると、`XIAO-SENSE`�
 
 3. `XIAO-SENSE`（別の名前で認識される場合があります）ドライブが表示されます。
 
+このフォークのブートローダーキーを導入済みなら、対象側をUSB接続し、`Fn` + 左`B` / 右`N`を2秒長押ししても移行できます。左右が通常動作・接続している必要があります。初回導入や設定リセット後は物理RESETボタンを使います。詳細は[キー操作の手順](../docs/bootloader-keys.md)を参照してください。
+
 ## ファームウェアの書き込み
 
 UF2ファイルは、`XIAO-SENSE`ドライブへドラッグ&ドロップ、またはFinder / エクスプローラーからコピーして書き込みます。
+
+以下は初回セットアップ・設定初期化を行う手順です。通常の更新では`settings_reset`は不要です。実行するとペアリングとStudioの保存済み設定が消去されます。アプリからの更新手順は[Windowsアプリの説明](../tools/battery/README.md#firmware-updater)を参照してください。
 
 1. 左側のXIAO nRF52840 Plusをブートローダーモードにします。
 2. `XIAO-SENSE`ドライブに`settings_reset-seeeduino_xiao_ble-zmk.uf2`を書き込みます。
@@ -47,7 +53,7 @@ UF2ファイルは、`XIAO-SENSE`ドライブへドラッグ&ドロップ、ま�
 6. 右側も同様に、`settings_reset-seeeduino_xiao_ble-zmk.uf2`と`cleave_hhjp_right rgbled_adapter-seeeduino_xiao_ble-zmk.uf2`を順番に書き込みます。
 7. 両方の書き込みが完了したら、次の接続確認・動作確認に進みます。
 > [!NOTE]
-> macOSではUF2ファイルのコピー後にエラーが表示される場合がありますが、コピー後に`XIAO-SENSE`ドライブが消えて自動的に再起動していれば、書き込みは完了しています。
+> macOSではUF2ファイルのコピー後にエラーが表示される場合があります。ドライブ消失だけで成功と判断せず、再起動後の通常入力・左右接続を確認してください。更新対応版はアプリでビルドIDの一致も確認できます。
 
 ## 接続確認・動作確認
 
@@ -86,7 +92,7 @@ UF2ファイルの書き込みが成功すると、`XIAO-SENSE`ドライブは�
 - コピーしたUF2ファイルが対象の側と合っているか確認します。左側には`cleave_hhjp_left...uf2`、右側には`cleave_hhjp_right...uf2`を書き込みます。
 - `settings_reset`を書き込んだ後は、もう一度ブートローダーモードに入ってから左右それぞれのUF2を書き込みます。
 - ドライブが消えない場合は、ファイルを削除してやり直すのではなく、USBケーブルを抜き差ししてブートローダーモードに入り直してから再度コピーします。
-- macOSではコピー後にエラーが表示される場合がありますが、`XIAO-SENSE`ドライブが消えて再起動していれば書き込みは完了しています。
+- macOSでコピー後にエラーが表示された場合も、ドライブ消失だけで判断せず、再起動後の動作を確認してください。
 
 ### Bluetoothに表示されない
 

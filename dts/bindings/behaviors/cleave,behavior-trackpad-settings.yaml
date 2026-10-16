@@ -1,0 +1,3 @@
+description: Forward a runtime trackpad sensitivity request to the peripheral
+compatible: "cleave,behavior-trackpad-settings"
+include: one_param.yaml
