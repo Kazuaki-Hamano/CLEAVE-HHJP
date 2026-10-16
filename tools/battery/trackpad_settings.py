@@ -165,6 +165,7 @@ def open_window(parent, is_busy=lambda: False):
         labels[0].set(f'{values[0].get()/100:.1f} 倍')
         labels[1].set(f'{values[1].get()} %')
         labels[2].set(f'{values[2].get()/100:.1f} 倍')
+        labels[3].set(f'{values[3].get()/100:.1f} 倍')
 
     def queue_change():
         state['debounce'] = None
@@ -180,9 +181,10 @@ def open_window(parent, is_busy=lambda: False):
             window.after_cancel(state['debounce'])
         state['debounce'] = window.after(200, queue_change)
 
-    for index, (title, low, high) in enumerate((('基本速度', 25, 800),
-                                                ('加速の強さ', 0, 300),
-                                                ('加速の最大倍率', 100, 800))):
+    for index, (title, low, high, step) in enumerate((('基本速度', 30, 800, 10),
+                                                    ('加速の強さ', 0, 300, 1),
+                                                    ('加速の最大倍率', 100, 800, 10),
+                                                    ('Fnスクロール量', 10, 400, 10))):
         row = ttk.Frame(frame)
         row.pack(fill='x', pady=7)
         ttk.Label(row, text=title, width=17).pack(side='left')
@@ -192,7 +194,7 @@ def open_window(parent, is_busy=lambda: False):
         slider.pack(side='left')
         ttk.Label(row, textvariable=labels[index], width=10).pack(side='left', padx=8)
         controls.append(slider)
-    ttk.Label(frame, text='???????1.0????????????????1x?????',
+    ttk.Label(frame, text='スクロール量の1.0倍は従来と同じ量です。検出感度は1x固定です。',
               wraplength=530).pack(anchor='w', pady=4)
     ttk.Label(frame, textvariable=status_text, wraplength=530).pack(anchor='w', pady=12)
     buttons = ttk.Frame(frame)

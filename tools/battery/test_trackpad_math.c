@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include "../../src/trackpad_math.h"
 int main(void) {
+    assert(trackpad_snap_multiplier(25) == 30);
+    assert(trackpad_snap_multiplier(274) == 270);
+    assert(trackpad_snap_multiplier(275) == 280);
+    assert(trackpad_snap_multiplier(799) == 800);
     assert(trackpad_isqrt(0) == 0 && trackpad_isqrt(25) == 5);
     assert(trackpad_isqrt(3*3+4*4) == 5);
     assert(trackpad_gain(100, 0, 800) == 100);

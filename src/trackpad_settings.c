@@ -21,6 +21,7 @@
 #endif
 #include "trackpad_settings.h"
 #include "trackpad_status.h"
+#include "trackpad_math.h"
 
 #define TP_SERVICE BT_UUID_128_ENCODE(0xb6f4a630, 0x3790, 0x4c3c, 0x934d, 0x911d84233b10)
 #define TP_VALUE BT_UUID_128_ENCODE(0xb6f4a631, 0x3790, 0x4c3c, 0x934d, 0x911d84233b10)
@@ -81,7 +82,7 @@ static int settings_set(const char *name, size_t len, settings_read_cb read_cb, 
     uint8_t buf[10] = {0};
     if (len != 8 && len != sizeof(buf)) { return -EINVAL; }
     int n = read_cb(cb_arg, buf, len);
-    if (n != len || (len == 8 ? buf[0] != 1 : buf[0] != 2)) { return -EINVAL; }
+    if (n < 0 || (size_t)n != len || (len == 8 ? buf[0] != 1 : buf[0] != 2)) { return -EINVAL; }
     if (len == 8) {
         /* Migrate saved cursor tuning; sensitivity is now always 1x. */
         buf[7] = 1;
@@ -89,8 +90,8 @@ static int settings_set(const char *name, size_t len, settings_read_cb read_cb, 
         uint16_t speed = sys_get_le16(buf + 1);
         uint16_t maximum = sys_get_le16(buf + 5);
         if (speed < 25 || speed > 800 || maximum < 100 || maximum > 800) { return -EINVAL; }
-        sys_put_le16(MAX(30, ((speed + 5) / 10) * 10), buf + 1);
-        sys_put_le16(((maximum + 5) / 10) * 10, buf + 5);
+        sys_put_le16(trackpad_snap_multiplier(speed), buf + 1);
+        sys_put_le16(trackpad_snap_multiplier(maximum), buf + 5);
     }
     struct cleave_trackpad_config c = decode_config(buf + 1);
     if (cleave_trackpad_validate(&c)) { return -EINVAL; }

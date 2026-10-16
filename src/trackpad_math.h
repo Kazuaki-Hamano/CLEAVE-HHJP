@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+static inline uint16_t trackpad_snap_multiplier(uint16_t value) {
+    return ((value + 5u) / 10u) * 10u;
+}
+
 /* Integer square root avoids floating point and preserves direction-independent gain. */
 static inline uint32_t trackpad_isqrt(uint32_t n) {
     uint32_t root = 0, bit = 1u << 30;
