@@ -9,6 +9,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
 #include "trackpad_settings.h"
+#include "peer_work.h"
 
 #define TP_SERVICE BT_UUID_128_ENCODE(0xb6f4a630, 0x3790, 0x4c3c, 0x934d, 0x911d84233b10)
 #define TP_VALUE BT_UUID_128_ENCODE(0xb6f4a631, 0x3790, 0x4c3c, 0x934d, 0x911d84233b10)
@@ -212,16 +213,17 @@ static void poll_peer(struct bt_conn *conn, void *user) {
     int err = bt_gatt_read(conn, &read_params);
     atomic_set(&transport_submit_error, err);
     if (err) { atomic_set(&transport_stage, 3); atomic_clear(&read_pending); }
+    else { atomic_cas(&transport_stage, 2, 7); }
 }
 static void poll(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(poll_work, poll);
 static void poll(struct k_work *work) {
     ARG_UNUSED(work);
     bt_conn_foreach(BT_CONN_TYPE_LE, poll_peer, NULL);
-    k_work_reschedule(&poll_work, K_SECONDS(1));
+    k_work_reschedule_for_queue(&cleave_peer_work_q, &poll_work, K_SECONDS(1));
 }
 static int trackpad_init(void) {
-    k_work_schedule(&poll_work, K_SECONDS(2));
+    k_work_schedule_for_queue(&cleave_peer_work_q, &poll_work, K_SECONDS(2));
     return 0;
 }
 SYS_INIT(trackpad_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);

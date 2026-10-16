@@ -57,6 +57,10 @@ def pending_message(status):
         return '右側との接続を確認できません。右側の電源と通常キーの動作を確認してください。'
     if stage == 1:
         return f'左右間の暗号化を待っています（security={transport["security"]}）。'
+    if stage == 2:
+        return '右側への設定通信を開始しています。長く続く場合は送信処理が停止しています。'
+    if stage == 7:
+        return '右側への設定通信は送信済みですが、応答が届いていません。'
     if stage == 3:
         return f'右側への通信を開始できません（エラー {transport["submit_error"]}）。'
     if stage == 4:

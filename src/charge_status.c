@@ -10,6 +10,7 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/split_peripheral_status_changed.h>
 #include "charge_status.h"
+#include "peer_work.h"
 
 /* XIAO CHG is open drain, active low. Never drive P0.17 as an output.
  * Pull-up is used only with USB present; without USB leave it floating to
@@ -112,7 +113,7 @@ K_WORK_DELAYABLE_DEFINE(charge_poll, poll_charge);
 static void poll_charge(struct k_work *work) {
     ARG_UNUSED(work);
     bt_conn_foreach(BT_CONN_TYPE_LE, read_peer, NULL);
-    k_work_reschedule(&charge_poll, K_SECONDS(5));
+    k_work_reschedule_for_queue(&cleave_peer_work_q, &charge_poll, K_SECONDS(5));
 }
 
 static int peer_status(const zmk_event_t *event) {
@@ -133,7 +134,7 @@ static int charge_status_init(void) {
     gpio_ready = device_is_ready(charge_gpio) &&
                  gpio_pin_configure(charge_gpio, 17, GPIO_INPUT) == 0;
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    k_work_schedule(&charge_poll, K_SECONDS(5));
+    k_work_schedule_for_queue(&cleave_peer_work_q, &charge_poll, K_SECONDS(5));
 #endif
     return gpio_ready ? 0 : -ENODEV;
 }

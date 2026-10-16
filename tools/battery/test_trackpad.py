@@ -13,6 +13,13 @@ def response(config=tp.Config(), flags=2, applied=1, save_error=0):
 
 
 class TrackpadProtocolTests(unittest.TestCase):
+    def test_submission_and_response_wait_are_distinct(self):
+        status = tp.decode(response(flags=1, applied=0))
+        status['transport'] = {'stage': 2}
+        self.assertIn('送信処理', tp.pending_message(status))
+        status['transport'] = {'stage': 7}
+        self.assertIn('送信済み', tp.pending_message(status))
+
     def test_transport_diagnostics_and_missing_characteristic(self):
         data = bytearray(response(flags=1))
         data[16:23] = bytes([1, 4, 2, 10, 0, 0, 0])

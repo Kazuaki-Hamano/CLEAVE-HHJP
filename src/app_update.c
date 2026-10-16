@@ -12,6 +12,7 @@
 #include <zmk/events/split_peripheral_status_changed.h>
 #include <zmk/split/central.h>
 #include "app_update.h"
+#include "peer_work.h"
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 #define UPDATE_SIDE 0
@@ -110,7 +111,7 @@ K_WORK_DELAYABLE_DEFINE(info_poll, poll_info);
 static void poll_info(struct k_work *work) {
     ARG_UNUSED(work);
     bt_conn_foreach(BT_CONN_TYPE_LE, read_info_peer, NULL);
-    k_work_reschedule(&info_poll, K_SECONDS(5));
+    k_work_reschedule_for_queue(&cleave_peer_work_q, &info_poll, K_SECONDS(5));
 }
 static int info_status(const zmk_event_t *event) {
     const struct zmk_split_peripheral_status_changed *status =
@@ -125,7 +126,7 @@ static int info_status(const zmk_event_t *event) {
 ZMK_LISTENER(cleave_update_info, info_status);
 ZMK_SUBSCRIPTION(cleave_update_info, zmk_split_peripheral_status_changed);
 static int update_info_init(void) {
-    k_work_schedule(&info_poll, K_SECONDS(6));
+    k_work_schedule_for_queue(&cleave_peer_work_q, &info_poll, K_SECONDS(6));
     return 0;
 }
 SYS_INIT(update_info_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
