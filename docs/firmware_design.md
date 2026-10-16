@@ -98,7 +98,7 @@ LANG2長押しと専用Fnキーのどちらでもスクロールになります�
 
 左パッドの役割は通常時の縦横スクロールとFn中の左右ナビゲーションです。`trackpad_local_control`はFnレイヤーを確認し、横64カウント以上・横成分が縦の2倍以上でスワイプ1回を確定します。180msの無移動、またはFn状態変更で判定を再開します。`trackpad_navigation.c`はZMKのConsumer AC Back / AC Forwardを30ms押して解放します。右側の速度・加速・Fn縦スクロールは変更しません。
 
-左側パッド対応では、`cleave_hhjp_trackpad_spi.dtsi`のSPI配線を左右で共有します。左側は`trackpad_local_listener`でローカル入力を、従来の`trackpad_listener`で右側input-split入力を処理します。各listenerに別の速度・スクロールprocessorインスタンスを割り当て、加速履歴と端数を分離しています。速度・加速・Fnスクロール量の設定は共有です。左側にも`CONFIG_SPI=y`とPinnacleドライバーを追加し、アプリのHID version 2は維持します。左パッドの方向とクリック領域は実機確認が必要です。
+`cleave_hhjp_trackpad_spi.dtsi`のSPI配線を左右で共有します。`trackpad_local_listener`は左ローカルの`trackpad_local_control`、`trackpad_listener`は右input-splitの速度・Fnスクロールprocessorを使います。右の加速履歴・端数と、左の軸別スクロール端数・ジェスチャー判定状態は独立しています。左側にも`CONFIG_SPI=y`とPinnacleドライバーがあり、アプリのHID version 2は維持します。両パッドの通常動作はユーザー確認済みで、今回のスクロール・スワイプは実機確認待ちです。
 
 Fn+B（左）/ Fn+N（右）を2秒長押しすると、操作した側で `&bootloader` を呼びます。短押しはB / ＋。`boot_hold` は `tap-preferred` のhold-tapです。
 USBを対象側につなぎ、左右が通常動作・接続している状態で操作します。詳細は[キー操作の手順](bootloader-keys.md)を参照してください。
