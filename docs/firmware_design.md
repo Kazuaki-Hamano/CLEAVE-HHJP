@@ -90,9 +90,9 @@ Fn+Ctrl+1〜5は `BT_SEL 0`〜`BT_SEL 4`、Fn+Ctrl+Backspaceは `BT_CLR`。Ctrl�
 
 ### タッチパッド
 
-右側TM040040の移動と左右タップクリックをinput-splitで左側へ転送します。`cleave_hhjp_left.overlay`のlistenerはFnレイヤー1で`zip_x_scaler 0 1`、`zip_y_scaler (-1) 16`、`zip_xy_to_scroll_mapper`を順に適用し、横移動を抑制して縦スクロールに変換します。上方向の負のY移動を正のホイール値に変換し、端数は標準スケーラーに保持させます。ボタンイベントは変更しません。通常レイヤーでは元のカーソル移動です。
+右側TM040040の移動と左右タップクリックをinput-splitで左側へ転送します。`cleave_hhjp_left.overlay`のlistenerはFnレイヤー1で`trackpad_scroll`を適用し、横移動を抑制して縦スクロールに変換します。`src/trackpad_pointer.c`で`-Y × スクロール倍率 / 16`を計算し、端数を保持します。1.0倍は従来と同量です。ボタンイベントは変更しません。通常レイヤーではカーソル速度と加速を適用します。
 
-LANG2長押しと専用Fnキーのどちらでもスクロールになります。旧マウスレイヤー、`src/mouse_speed.c`、専用behavior/scalerのbindingとCMake参照は削除しました。通常移動は`src/trackpad_pointer.c`で速度と加速を処理し、`src/trackpad_settings.c`でUSB Feature 7の変更・保存・左右間の検出感度同期を行います。仕様と確認範囲は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。今回追加の設定とスクロールは実機確認待ちです。
+LANG2長押しと専用Fnキーのどちらでもスクロールになります。旧マウスレイヤー、`src/mouse_speed.c`、専用behavior/scalerのbindingとCMake参照は削除しました。`src/trackpad_settings.c`でUSB Feature 7 version 2の変更・保存・固定感度1xの確認を行います。基本速度と最大倍率は0.1倍刻み、スクロール量は0.1～4.0倍です。旧保存値は引き継ぎ、感度を1x、スクロール量を1.0倍へ移行します。仕様と確認範囲は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。従来の反映・保存はユーザー確認済み、今回追加のスクロール量は実機確認待ちです。
 
 ### UF2移行
 
