@@ -12,10 +12,12 @@ class Config:
     acceleration: int = 0
     maximum: int = 300
     sensitivity: int = 1
+    scroll: int = 100
 
     def validate(self):
-        if not (25 <= self.speed <= 800 and 0 <= self.acceleration <= 300 and
-                100 <= self.maximum <= 800 and 1 <= self.sensitivity <= 4):
+        if not (30 <= self.speed <= 800 and self.speed % 10 == 0 and 0 <= self.acceleration <= 300 and
+                100 <= self.maximum <= 800 and self.maximum % 10 == 0 and
+                self.sensitivity == 1 and 10 <= self.scroll <= 400 and self.scroll % 10 == 0):
             raise ValueError('設定値が範囲外です')
         return self
 
@@ -23,17 +25,19 @@ class Config:
 def encode(config, save=False):
     config.validate()
     result = bytearray(32)
-    result[:4] = bytes((7, 1, int(save), 0))
+    result[:4] = bytes((7, 2, int(save), 0))
     struct.pack_into('<HHHB', result, 4, config.speed, config.acceleration,
-                     config.maximum, config.sensitivity)
+                     config.maximum, 1)
+    struct.pack_into('<H', result, 28, config.scroll)
     return bytes(result)
 
 
 def decode(data):
     data = bytes(data)
-    if len(data) != 32 or data[:2] != b'\x07\x01' or data[2] & ~7 or data[3]:
+    if len(data) != 32 or data[:2] != b'\x07\x02' or data[2] & ~7 or data[3]:
         raise ValueError('タッチパッド設定に対応したファームウェアへ左右を更新してください')
-    config = Config(*struct.unpack_from('<HHHB', data, 4)).validate()
+    config = Config(*struct.unpack_from('<HHHB', data, 4),
+                    scroll=struct.unpack_from('<H', data, 28)[0]).validate()
     if data[11] > 4:
         raise ValueError('検出感度の応答が不正です')
     result = {'config': config, 'dirty': bool(data[2] & 1),
@@ -144,8 +148,8 @@ def open_window(parent, is_busy=lambda: False):
     frame.pack(fill='both', expand=True)
     ttk.Label(frame, text='左側をUSB接続して調整します。変更はその場で反映されます。').pack(anchor='w')
     ttk.Label(frame, text='加速は指を動かす速さに応じて働きます。0%で加速なし。').pack(anchor='w', pady=(4, 16))
-    values = [tk.IntVar(value=v) for v in (200, 0, 300, 1)]
-    labels = [tk.StringVar() for _ in range(3)]
+    values = [tk.IntVar(value=v) for v in (200, 0, 300, 100)]
+    labels = [tk.StringVar() for _ in range(4)]
     status_text = tk.StringVar(value='現在の設定を読み込んでいます…')
     tasks, results = queue.Queue(), queue.Queue()
     closed = threading.Event()
@@ -154,12 +158,13 @@ def open_window(parent, is_busy=lambda: False):
     controls = []
 
     def current():
-        return Config(*(v.get() for v in values)).validate()
+        return Config(values[0].get(), values[1].get(), values[2].get(),
+                      scroll=values[3].get()).validate()
 
     def refresh_labels():
-        labels[0].set(f'{values[0].get()/100:.2f} 倍')
+        labels[0].set(f'{values[0].get()/100:.1f} 倍')
         labels[1].set(f'{values[1].get()} %')
-        labels[2].set(f'{values[2].get()/100:.2f} 倍')
+        labels[2].set(f'{values[2].get()/100:.1f} 倍')
 
     def queue_change():
         state['debounce'] = None
@@ -182,20 +187,12 @@ def open_window(parent, is_busy=lambda: False):
         row.pack(fill='x', pady=7)
         ttk.Label(row, text=title, width=17).pack(side='left')
         slider = tk.Scale(row, from_=low, to=high, orient='horizontal',
-                          variable=values[index], showvalue=False, resolution=1,
+                          variable=values[index], showvalue=False, resolution=step,
                           command=changed, length=250, state='disabled')
         slider.pack(side='left')
         ttk.Label(row, textvariable=labels[index], width=10).pack(side='left', padx=8)
         controls.append(slider)
-    row = ttk.Frame(frame)
-    row.pack(fill='x', pady=12)
-    ttk.Label(row, text='検出感度', width=17).pack(side='left')
-    for n in range(1, 5):
-        radio = ttk.Radiobutton(row, text=f'{n}x', value=n, variable=values[3], command=changed)
-        radio.pack(side='left', padx=10)
-        radio.state(['disabled'])
-        controls.append(radio)
-    ttk.Label(frame, text='検出感度は触れ方への反応です。カーソル速度の倍率ではありません。',
+    ttk.Label(frame, text='???????1.0????????????????1x?????',
               wraplength=530).pack(anchor='w', pady=4)
     ttk.Label(frame, textvariable=status_text, wraplength=530).pack(anchor='w', pady=12)
     buttons = ttk.Frame(frame)
@@ -249,7 +246,7 @@ def open_window(parent, is_busy=lambda: False):
             if not state['ready']:
                 state['loading'] = True
                 c = status['config']
-                for variable, value in zip(values, (c.speed, c.acceleration, c.maximum, c.sensitivity)):
+                for variable, value in zip(values, (c.speed, c.acceleration, c.maximum, c.scroll)):
                     variable.set(value)
                 refresh_labels()
                 for control in controls:

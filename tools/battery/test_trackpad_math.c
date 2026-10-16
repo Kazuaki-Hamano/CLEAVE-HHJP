@@ -16,5 +16,14 @@ int main(void) {
     int32_t rx = 0, ry = 0;
     assert(trackpad_scale(30, 200, 300, &rx) == 180);
     assert(trackpad_scale(-40, 200, 300, &ry) == -240);
+    remainder = 0;
+    assert(trackpad_scroll(-16, 100, &remainder) == 1);
+    assert(trackpad_scroll(16, 200, &remainder) == -2);
+    total = 0;
+    for (int i = 0; i < 160; i++) { total += trackpad_scroll(-1, 10, &remainder); }
+    assert(total == 1 && remainder == 0);
+    for (int i = 0; i < 160; i++) { total += trackpad_scroll(1, 10, &remainder); }
+    assert(total == 0 && remainder == 0);
+    assert(trackpad_scroll(-16, 400, &remainder) == 4);
     puts("Trackpad speed, fractional movement, acceleration cap and symmetry: PASS");
 }

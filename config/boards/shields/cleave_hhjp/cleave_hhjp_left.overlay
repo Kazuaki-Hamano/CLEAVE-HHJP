@@ -16,14 +16,16 @@
 	 * Pointer-up is negative Y; wheel-up is positive. */
 	fn_scroll {
 		layers = <1>;
-		input-processors = <&zip_x_scaler 0 1>,
-			<&zip_y_scaler (-1) 16>,
-			<&zip_xy_to_scroll_mapper>;
+		input-processors = <&trackpad_scroll>;
 	};
 };
 
 / {
 	trackpad_speed: trackpad_speed {
+		compatible = "cleave,input-processor-trackpad";
+		#input-processor-cells = <0>;
+	};
+	trackpad_scroll: trackpad_scroll {
 		compatible = "cleave,input-processor-trackpad";
 		#input-processor-cells = <0>;
 	};

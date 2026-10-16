@@ -27,3 +27,10 @@ static inline int32_t trackpad_scale(int32_t value, uint16_t speed, uint32_t gai
     *remainder = scaled - (int64_t)result * 10000;
     return result;
 }
+static inline int32_t trackpad_scroll(int32_t value, uint16_t amount, int32_t *remainder) {
+    /* Original scroll was -Y/16. Keep small motions across packets. */
+    int64_t scaled = -(int64_t)value * amount + *remainder;
+    int32_t result = scaled / 1600;
+    *remainder = scaled - (int64_t)result * 1600;
+    return result;
+}

@@ -26,9 +26,10 @@
 #define TP_VALUE BT_UUID_128_ENCODE(0xb6f4a631, 0x3790, 0x4c3c, 0x934d, 0x911d84233b10)
 static struct bt_uuid_128 value_uuid = BT_UUID_INIT_128(TP_VALUE);
 static struct k_spinlock cfg_lock;
-static struct cleave_trackpad_config config = {200, 0, 300, 1};
+static struct cleave_trackpad_config config = {200, 0, 300, 1, 100};
 static uint32_t generation = 1;
 /* Diagnostic fields are exported in previously reserved bytes of Report 7. */
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 static atomic_t transport_stage;
 static atomic_t transport_security;
 static atomic_t transport_submit_error;
@@ -36,8 +37,7 @@ static atomic_t transport_att_error;
 static atomic_t transport_length;
 static atomic_t transport_attempts;
 static atomic_t transport_completions;
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-static struct cleave_trackpad_config saved = {200, 0, 300, 1};
+static struct cleave_trackpad_config saved = {200, 0, 300, 1, 100};
 static uint8_t peer_sensitivity;
 static int8_t peer_error;
 static int64_t peer_updated;
@@ -46,9 +46,10 @@ static int8_t save_error;
 #endif
 
 int cleave_trackpad_validate(const struct cleave_trackpad_config *c) {
-    return c->speed >= 25 && c->speed <= 800 && c->acceleration <= 300 &&
+    return c->speed >= 30 && c->speed <= 800 && c->speed % 10 == 0 && c->acceleration <= 300 &&
            c->maximum >= 100 && c->maximum <= 800 &&
-           c->sensitivity >= 1 && c->sensitivity <= 4 ? 0 : -EINVAL;
+           c->maximum % 10 == 0 && c->sensitivity == 1 &&
+           c->scroll >= 10 && c->scroll <= 400 && c->scroll % 10 == 0 ? 0 : -EINVAL;
 }
 void cleave_trackpad_get(struct cleave_trackpad_config *out, uint32_t *gen) {
     k_spinlock_key_t key = k_spin_lock(&cfg_lock);
@@ -61,24 +62,36 @@ void cleave_trackpad_get(struct cleave_trackpad_config *out, uint32_t *gen) {
 static bool equal_config(const struct cleave_trackpad_config *a,
                          const struct cleave_trackpad_config *b) {
     return a->speed == b->speed && a->acceleration == b->acceleration &&
-           a->maximum == b->maximum && a->sensitivity == b->sensitivity;
+           a->maximum == b->maximum && a->sensitivity == b->sensitivity &&
+           a->scroll == b->scroll;
 }
 static void encode_config(uint8_t *buf, const struct cleave_trackpad_config *c) {
     sys_put_le16(c->speed, buf);
     sys_put_le16(c->acceleration, buf + 2);
     sys_put_le16(c->maximum, buf + 4);
-    buf[6] = c->sensitivity;
+    buf[6] = 1;
+    sys_put_le16(c->scroll, buf + 7);
 }
 static struct cleave_trackpad_config decode_config(const uint8_t *buf) {
     return (struct cleave_trackpad_config){sys_get_le16(buf), sys_get_le16(buf + 2),
-                                         sys_get_le16(buf + 4), buf[6]};
+                                         sys_get_le16(buf + 4), buf[6], sys_get_le16(buf + 7)};
 }
 static int settings_set(const char *name, size_t len, settings_read_cb read_cb, void *cb_arg) {
     if (strcmp(name, "config")) { return -ENOENT; }
-    uint8_t buf[8];
-    if (len != sizeof(buf)) { return -EINVAL; }
-    int n = read_cb(cb_arg, buf, sizeof(buf));
-    if (n != sizeof(buf) || buf[0] != 1) { return -EINVAL; }
+    uint8_t buf[10] = {0};
+    if (len != 8 && len != sizeof(buf)) { return -EINVAL; }
+    int n = read_cb(cb_arg, buf, len);
+    if (n != len || (len == 8 ? buf[0] != 1 : buf[0] != 2)) { return -EINVAL; }
+    if (len == 8) {
+        /* Migrate saved cursor tuning; sensitivity is now always 1x. */
+        buf[7] = 1;
+        sys_put_le16(100, buf + 8);
+        uint16_t speed = sys_get_le16(buf + 1);
+        uint16_t maximum = sys_get_le16(buf + 5);
+        if (speed < 25 || speed > 800 || maximum < 100 || maximum > 800) { return -EINVAL; }
+        sys_put_le16(MAX(30, ((speed + 5) / 10) * 10), buf + 1);
+        sys_put_le16(((maximum + 5) / 10) * 10, buf + 5);
+    }
     struct cleave_trackpad_config c = decode_config(buf + 1);
     if (cleave_trackpad_validate(&c)) { return -EINVAL; }
     k_spinlock_key_t key = k_spin_lock(&cfg_lock);
@@ -92,7 +105,7 @@ SETTINGS_STATIC_HANDLER_DEFINE(cleave_trackpad, "cleave_trackpad", NULL, setting
 static struct cleave_trackpad_config save_snapshot;
 static void save_config(struct k_work *work) {
     ARG_UNUSED(work);
-    uint8_t buf[8] = {1};
+    uint8_t buf[10] = {2};
     encode_config(buf + 1, &save_snapshot);
     int err = settings_save_one("cleave_trackpad/config", buf, sizeof(buf));
     k_spinlock_key_t key = k_spin_lock(&cfg_lock);
@@ -104,11 +117,16 @@ static void save_config(struct k_work *work) {
 K_WORK_DEFINE(save_work, save_config);
 
 int cleave_trackpad_command(const uint8_t *buf, unsigned len) {
-    if (len != 32 || buf[0] != 7 || buf[1] != 1 || buf[2] > 1 || buf[3]) {
+    if (len != 32 || buf[0] != 7 || buf[1] != 2 || buf[2] > 1 || buf[3]) {
         return -EINVAL;
     }
-    for (unsigned i = 11; i < len; i++) { if (buf[i]) { return -EINVAL; } }
-    struct cleave_trackpad_config c = decode_config(buf + 4);
+    for (unsigned i = 11; i < len; i++) {
+        if (i != 28 && i != 29 && buf[i]) { return -EINVAL; }
+    }
+    uint8_t packed[9];
+    memcpy(packed, buf + 4, 7);
+    memcpy(packed + 7, buf + 28, 2);
+    struct cleave_trackpad_config c = decode_config(packed);
     if (cleave_trackpad_validate(&c)) { return -EINVAL; }
     /* A save is accepted only after the peripheral confirmed this sensitivity. */
     k_spinlock_key_t key = k_spin_lock(&cfg_lock);
@@ -128,13 +146,16 @@ int cleave_trackpad_command(const uint8_t *buf, unsigned len) {
 }
 void cleave_trackpad_report(uint8_t *out) {
     memset(out, 0, 32);
-    out[0] = 7; out[1] = 1;
+    out[0] = 7; out[1] = 2;
     k_spinlock_key_t key = k_spin_lock(&cfg_lock);
     bool fresh = peer_updated && k_uptime_get() - peer_updated < 5000;
     out[2] = (!equal_config(&config, &saved) ? 1 : 0) |
              (fresh && !peer_error && peer_sensitivity == config.sensitivity ? 2 : 0) |
              (atomic_get(&save_pending) ? 4 : 0);
-    encode_config(out + 4, &config);
+    uint8_t packed[9];
+    encode_config(packed, &config);
+    memcpy(out + 4, packed, 7);
+    memcpy(out + 28, packed + 7, 2);
     out[11] = fresh ? peer_sensitivity : 0;
     out[12] = fresh ? peer_error : -ENOTCONN;
     out[13] = save_error;
@@ -252,7 +273,7 @@ K_WORK_DELAYABLE_DEFINE(status_work, send_status);
 static int request_sensitivity(struct zmk_behavior_binding *binding,
                                 struct zmk_behavior_binding_event event) {
     ARG_UNUSED(event);
-    if (binding->param1 < 1 || binding->param1 > 4) { return -EINVAL; }
+    if (binding->param1 != 1) { return -EINVAL; }
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     cleave_pinnacle_sensitivity_request(binding->param1);
     /* Sensor work and this response run serially on the system work queue. */
