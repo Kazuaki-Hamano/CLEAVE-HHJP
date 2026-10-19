@@ -460,6 +460,8 @@ static int handle_get_split_info_request(
 
     zmk_ble_management_GetSplitInfoResponse result =
         zmk_ble_management_GetSplitInfoResponse_init_zero;
+    /* Nanopb omits the entire submessage unless its presence flag is set. */
+    result.has_info = true;
     zmk_ble_management_SplitInfo *info = &result.info;
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_BLE)

@@ -29,7 +29,7 @@ static struct zmk_split_transport_status get_status(void) {queries++;return stat
 static bool bonded;
 static bool zmk_split_bt_peripheral_is_bonded(void) {return bonded;}
 typedef struct {bool is_split,is_central,peripheral_connected,central_bonded;} zmk_ble_management_SplitInfo;
-typedef struct {zmk_ble_management_SplitInfo info;} zmk_ble_management_GetSplitInfoResponse;
+typedef struct {bool has_info;zmk_ble_management_SplitInfo info;} zmk_ble_management_GetSplitInfoResponse;
 #define zmk_ble_management_GetSplitInfoResponse_init_zero {0}
 typedef struct {int unused;} zmk_ble_management_GetSplitInfoRequest;
 typedef struct {int which_response_type;struct {zmk_ble_management_GetSplitInfoResponse get_split_info;} response_type;} zmk_ble_management_Response;
@@ -40,7 +40,7 @@ test = r"""
 static zmk_ble_management_SplitInfo query(void) {
  zmk_ble_management_Response r={0};zmk_ble_management_GetSplitInfoRequest q={0};
  assert(handle_get_split_info_request(&q,&r)==0);
- assert(r.which_response_type==5);return r.response_type.get_split_info.info;
+ assert(r.which_response_type==5);assert(r.response_type.get_split_info.has_info);return r.response_type.get_split_info.info;
 }
 int main(void) {
  struct api valid={get_status},missing={0};
