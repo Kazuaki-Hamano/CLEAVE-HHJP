@@ -33,11 +33,19 @@ static int zmk_keymap_layer_deactivate(uint8_t id, bool locking) {
 }
 """
 validation = source[source.index("static bool is_valid_layer_value"):source.index("static void resolve_and_apply")]
+handler = Path("modules/default-layer/src/studio/default_layer_handler.c").read_text()
+count_start = handler.index("    out->layer_count = 0;")
+count_end = handler.index("    out->os_detection_available", count_start)
+count_function = ("static unsigned reported_count(void) {struct {unsigned layer_count;} result, *out=&result;" +
+                  handler[count_start:count_end] + "return out->layer_count;}\n")
 test = r"""
 static void select_layer(int index) {
  apply_layer((struct zmk_endpoint_instance){0}, 1, index, index, "test");
 }
 int main(void) {
+ assert(reported_count() == 4);
+ order[2] = 255; order[3] = 255; assert(reported_count() == 2);
+ order[2] = 3; order[3] = 1;
  assert(is_valid_layer_value(-1, false));
  assert(is_valid_layer_value(-2, true));
  assert(!is_valid_layer_value(-2, false));
@@ -59,5 +67,5 @@ int main(void) {
 subprocess.run(
     ["wsl", "--", "bash", "-lc",
      "gcc -std=c11 -Wall -Wextra -Werror -Wno-unused-parameter -x c -o /tmp/cleave-host-layers - && /tmp/cleave-host-layers"],
-    input=(stub + validation + source[start:end] + test).encode(), check=True,
+    input=(stub + validation + count_function + source[start:end] + test).encode(), check=True,
 )
