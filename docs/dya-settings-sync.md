@@ -22,6 +22,8 @@ No input/activity-marking events or polling of the right are added. The worker d
 
 `python tools/dya-studio/test_activity_sync.py` compiles production outbox, store and peripheral apply code with deterministic transport/NVS mocks. Tests cover disconnected queueing, latest-value coalescing, central reboot replay, failed local/outbox/right saves, stale/wrong-source/mismatched ACK rejection, persisted completion, no work after completion, reset and duplicate delivery. This is software evidence only, not hardware confirmation of flash timing or power consumption.
 
+`test_activity_rpc_wire.py --deps output/dya-research/nanopb-test-deps` also generates the unchanged settings proto with nanopb 0.4.9.1 and round-trips production Get/Set responses. It checks nested-message presence, rejection of missing settings, the actual queue call and failure response. Install test dependencies as described in dya-split-status.md.
+
 Build, artifact and hardware acceptance pending. Main is unchanged.
 
 ## Hardware acceptance

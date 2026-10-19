@@ -102,13 +102,20 @@ int main(void) {
  outbox_fail=1;ack();assert(state.pending);outbox_fail=0;ack();assert(!state.pending && canceled>0);
  int before=sent;sync_work_handler(NULL);assert(sent==before); /* No work/relay after ack. */
  reboot();assert(!state.pending);sync_work_handler(NULL);assert(sent==before);
+ flash_fail_side=0;assert(cleave_activity_sync_queue(47000,1100000)==-EIO);assert(state.pending);
+ before=sent;sync_work_handler(NULL);assert(sent==before);
+ flash_fail_side=-1;sync_work_handler(NULL);assert(sent==before+1);deliver();ack();assert(!state.pending);
  uint32_t sequence=state.sequence;
  assert(cleave_activity_sync_queue(60000,1200000)==0);assert(state.sequence==sequence+1);
+ outbox_fail=1;assert(sync_reset()==-EIO && state.pending);outbox_fail=0;
  assert(sync_reset()==0 && !state.pending);reboot();assert(!state.pending);ack();assert(!state.pending);
  /* Duplicate delivery saves again but avoids activity setter churn. */
  int iw=idle_writes,sw=sleep_writes;deliver();assert(idle_writes==iw && sleep_writes==sw);
  assert(sync_load("bad",20,disk_read,NULL)==-ENOENT);
  assert(sync_load("activity",19,disk_read,NULL)==-EINVAL);
+ idle[1]=71000;reboot();sync_work_handler(NULL);assert(idle[1]==71000 && !state.pending);
+ state.sequence=UINT32_MAX;assert(cleave_activity_sync_queue(1,2)==-EOVERFLOW);
+ uint32_t bad_version=99;memcpy(disk,&bad_version,4);assert(sync_load("activity",20,disk_read,NULL)==-EINVAL);
  puts("Durable outbox, coalescing, offline retry, reboot, saved ack, stale ack, reset and no-op tests: PASS");
 }
 """
