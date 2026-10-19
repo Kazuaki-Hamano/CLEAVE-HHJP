@@ -51,3 +51,7 @@ All five item names now omit the role prefix: `speed_percent`, `acceleration_per
 On the first boot, the three old keys that could persist (`right_speed_percent`, `right_max_gain_percent`, `left_scroll_percent`) are migrated. An already saved new key takes precedence. An old key is removed only after a successful copy, preventing a later reset from resurrecting it. Failed copies retain the source for retry. The two oversized old keys could never persist; re-enter their values after flashing. This is separate from the intentionally unsupported legacy Windows settings blob.
 
 Save-error fix and prefix removal source `405d4595`, firmware ID `db2f3d84`, Actions run `39295841308`, artifacts `output/firmware/405d4595/`. Both firmware builds and UF2/configuration/keymap checks passed, as did adapter migration and storage-name regression tests. Hardware save/power-cycle persistence confirmation remains pending.
+
+## Hardware acceptance of save correction
+
+The user confirmed successful saving with the corrected trial on 2026-10-20, after previously confirming both custom setting groups were visible and changes affected motion. This accepts integration of the trackpad trial. Power-cycle retention and individual battery/deep-sleep checks were not separately reported for the correction and are not claimed as newly verified.
