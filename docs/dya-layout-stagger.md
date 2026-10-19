@@ -27,3 +27,9 @@ physical geometry tuples in each side's actual DTS match the modified source.
 Left GNU build-id: `37326e20f1a80407e5505ce23440f7a38a1657ac`.
 `layout-preview.png` is a source-generated geometry preview, not a DYA screenshot.
 Actual DYA display acceptance remains pending. Main is unchanged.
+
+## Hardware acceptance
+
+On 2026-10-20, the user confirmed that the corrected layout is displayed in DYA
+Studio. The trial is accepted for main integration. Firmware source remains
+`e2c6203d`, identity `11744408`; no additional flash or settings reset is needed.
