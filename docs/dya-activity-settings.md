@@ -20,4 +20,8 @@ Changes are relayed to a connected right half; this module does not itself guara
 4. Keep both halves awake for at least 70 seconds after the last change, then power cycle both. Reconnect DYA and verify both retained the duration.
 5. With both on battery, check sleep and own-side key wake using the chosen duration. Restore 30 minutes for ordinary use if desired, allowing the same save interval.
 
-Build/artifact and real-device DYA settings checks pending. No firmware or settings reset has been written by the assistant.
+Trial source `31d417b0`, matching left/right identity `13dc8a55`. Three UF2s were generated in run https://github.com/Kazuaki-Hamano/CLEAVE-HHJP/actions/runs/39279771579 and integrity/family/identity checked. Left keyboard/mouse/battery/charging/update HID signatures passed. Both firmware images contain the activity persistence key, change/report/request relay events, and exactly one compiled sleep/idle defaults pair (1800000/30000ms). The left includes the `zmk__settings` RPC registration.
+
+Right complete job logs confirm `CONFIG_ZMK_SETTINGS_RPC=y` and `CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE=60000`. Left merged-configuration logs and run-level exports remained unavailable (404), with metadata stuck queued despite generated artifacts; the full merged-config verification is not claimed complete. `build-logs.zip` contains only the right log and a provenance note. `activity-binary-verification.json` explicitly records the remaining left-log check.
+
+Verified copies of the artifacts and checksums are at `V:/Projects/CLEAVE-HHJP/output/firmware/31d417b0/`. No firmware or settings reset was written by the assistant. Real-device DYA reads/writes, split reflection, persistence, and selected-duration sleep/wake remain for hardware acceptance. Main remains unchanged.
