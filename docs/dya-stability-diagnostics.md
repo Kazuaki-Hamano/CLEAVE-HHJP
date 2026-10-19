@@ -38,3 +38,7 @@ Static linker RAM allocation: left 153656/262144 bytes (58.62%), right 96828/262
 3. Expand Stack Usage, refresh after normal use and confirm thread names, allocated sizes and usage/percentages appear. Refresh after opening key diagnostics and editing a reversible setting to observe the high-water marks. Report any very small remaining headroom rather than automatically shrinking stacks.
 4. Copy the support report and confirm watchdog status is included. The current DYA support-report builder does not include stack usage, so retain a screenshot separately if needed.
 5. Check both halves can still deep-sleep and wake with their own keys. Restore preferred timeouts after any short-duration sleep test. Leave incident records intact if an unexpected reboot occurs, so its cause can be inspected.
+
+## Hardware acceptance
+
+On 2026-10-20, after receiving the trial firmware and normal-operation, watchdog-history, stack-display and sleep/wake checks, the user reported no apparent problems and declared diagnostics complete. This accepts the trial for main integration. No deliberate freeze/fatal injection was performed, so actual recovery from an induced fault is not claimed hardware verified. Firmware source is unchanged from `fa4c082c` / identity `1cd934eb`.
