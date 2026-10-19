@@ -55,9 +55,18 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
             else:
                 assert not re.search(r"(?m) CONFIG_ZMK_BLE_MANAGEMENT=y$", config), "BLE management must remain central-only"
             assert re.search(r"(?m) CONFIG_ZMK_IDLE_TIMEOUT=30000$", config), (side, "idle default changed")
-            for setting in ("CONFIG_ZMK_SETTINGS_RPC=y", "CONFIG_ZMK_OS_DETECTION_LAYER_AUTO_SWITCH=y", "CONFIG_ZMK_DEFAULT_LAYER=y", "CONFIG_ZMK_SLEEP=y"):
+            for setting in ("CONFIG_ZMK_SETTINGS_RPC=y", "CONFIG_ZMK_OS_DETECTION_LAYER_AUTO_SWITCH=y", "CONFIG_ZMK_DEFAULT_LAYER=y"):
                 assert not re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, "unexpected behavior change", setting)
+            if "--deep-sleep" not in sys.argv:
+                assert not re.search(r"(?m) CONFIG_ZMK_SLEEP=y$", config), (side, "unexpected sleep enablement")
             print(side, "DYA connection config: PASS")
+        if "--deep-sleep" in sys.argv:
+            for setting in ("CONFIG_ZMK_SLEEP=y", "CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=60000", "CONFIG_PM_DEVICE=y", "CONFIG_POWEROFF=y"):
+                assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
+            dts_entry = next(n for n in logs.namelist() if side in n and "Devicetree file" in n)
+            dts = logs.read(dts_entry).decode()
+            assert re.search(r"kscan_0\s*\{[^}]*wakeup-source;", dts, re.S), (side, "key matrix wake source missing")
+            print(side, "one-minute deep sleep and matrix wake source: PASS")
         uf2 = next(root.glob("*" + side + "*.uf2"))
         data = uf2.read_bytes()
         payload = b"".join(data[i + 32:i + 32 + int.from_bytes(data[i + 16:i + 20], "little")] for i in range(0, len(data), 512))
