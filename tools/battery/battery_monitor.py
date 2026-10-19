@@ -55,8 +55,12 @@ def decode_power(data):
             'right_power_age_seconds': (data[4] | data[5] << 8) if data[3] else None}
 
 
+def display_level(level, power):
+    return None if power == 'usb_idle' else level
+
+
 def side_label(side, level, power):
-    percent = '未取得' if level is None else f'{level}%'
+    percent = '-%' if power == 'usb_idle' else ('未取得' if level is None else f'{level}%')
     suffix = {None: '充電不明', 'battery': 'バッテリー',
               'usb_idle': 'USB給電', 'charging': '充電中'}[power]
     return f'{side} {percent}（{suffix}）'
@@ -108,12 +112,15 @@ def main():
         image = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
         for x, level, power in ((5, left, left_power), (35, right, right_power)):
+            level = display_level(level, power)
             draw.rounded_rectangle((x, 10, x + 23, 57), radius=4, fill='#253341', outline='white', width=2)
             draw.rectangle((x + 7, 5, x + 16, 10), fill='white')
             if level is not None:
                 height = max(1, round(39 * level / 100))
                 color = '#ff6655' if level <= 20 else '#55d6a0'
                 draw.rectangle((x + 4, 53 - height, x + 19, 53), fill=color)
+            elif power == 'usb_idle':
+                draw.line((x + 6, 35, x + 17, 35), fill='#aaaaaa', width=3)
             else:
                 draw.line((x + 5, 28, x + 18, 41), fill='#aaaaaa', width=3)
                 draw.line((x + 18, 28, x + 5, 41), fill='#aaaaaa', width=3)

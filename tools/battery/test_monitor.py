@@ -41,8 +41,15 @@ class ChargingReportTests(unittest.TestCase):
         text = monitor.tooltip({'left': 100, 'right': 0,
                                 'left_power': 'charging', 'right_power': 'usb_idle'})
         self.assertIn('左 100%（充電中）', text)
-        self.assertIn('右 0%（USB給電）', text)
+        self.assertIn('右 -%（USB給電）', text)
         self.assertNotIn('満充電', text)
+
+    def test_usb_display_hides_unreliable_levels_without_changing_raw_values(self):
+        self.assertIsNone(monitor.display_level(90, 'usb_idle'))
+        self.assertEqual(monitor.display_level(40, 'charging'), 40)
+        self.assertEqual(monitor.display_level(0, 'battery'), 0)
+        self.assertEqual(monitor.display_level(40, None), 40)
+        self.assertEqual(monitor.side_label('右', 0, 'battery'), '右 0%（バッテリー）')
 
     def test_windows_feature_report_padding(self):
         class Device:
