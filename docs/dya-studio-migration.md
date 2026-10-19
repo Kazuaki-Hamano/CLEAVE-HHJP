@@ -62,3 +62,11 @@ python tools/battery/dev/verify_current.py output/firmware/203164f6
 ```
 
 The upstream build still reports warnings (including deprecated KSCAN and DYA source warnings); build success does not establish runtime correctness. No firmware has been flashed, no settings reset has been performed, and no real-device DYA connection or runtime behavior has been verified. Main remains unchanged. Complete the hardware acceptance steps above before integration.
+
+## Hardware failure report and first isolation trial
+
+The user reported that the left half works alone, but enabling the right half disrupts Bluetooth. Stage-1 hardware acceptance failed; do not integrate into main. The actual trial Kconfig confirms right is a split peripheral (no central role, one connection, empty device name), so the reported host-like behavior is not evidence that it was built as central.
+
+First hypothesis to test: split command structures now contain the 240-byte relay payload union, but the left split-run worker still has a 512-byte stack and the right notify worker 756 bytes. The existing sensitivity poll sends a peripheral behavior every second, exercising this path after connection. This is a source-based hypothesis, not a proven crash cause; no runtime fault log is available.
+
+The comparison trial changes only these worker stack capacities to 2048 bytes on each side. Keep all pairing/settings intact for this comparison. Persisted pairing or service-cache incompatibility across the Zephyr upgrade remains another possibility; a settings reset has not been performed.
