@@ -27,7 +27,9 @@ The current reusable build exports UF2s, not matching ELF files. Fatal PC/LR add
 
 ## Validation
 
-Build/artifact and hardware validation pending. Main unchanged.
+Source `fa4c082c`, firmware ID `1cd934eb`, Actions run `39319415474`, artifacts `output/firmware/fa4c082c/`. UF2 integrity/HID, actual merged configuration/DTS, conservative watchdog timing, software-only fallback setting, disabled test/development flags, central-only stack RPC/instrumentation, both-half watchdog relay, prior diagnostic modules, settings sync, trackpad tuning, sleep defaults and keymap checks passed. Left GNU build-id is `c4668804335dcb556de7207b09d08a353d2b1fd8`.
+
+Static linker RAM allocation: left 153656/262144 bytes (58.62%), right 96828/262144 (36.94%). This is not runtime stack headroom. Module-source review confirms fatal handling records to pending RAM before reboot and does not attempt an ISR/fault-context flash write. No deliberate failure/reboot was triggered by the assistant. Actual screen display, right-side history query, monitored normal-use stability and sleep/wake acceptance remain pending. Main unchanged.
 
 ## Hardware acceptance
 
