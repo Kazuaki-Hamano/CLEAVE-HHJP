@@ -1,7 +1,7 @@
 if(CONFIG_SHIELD_CLEAVE_HHJP_LEFT OR CONFIG_SHIELD_CLEAVE_HHJP_RIGHT)
   target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/peer_work.c)
-  target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/trackpad_settings.c)
   if(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+    target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/trackpad_settings.c)
     target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/trackpad_pointer.c)
     target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/trackpad_navigation.c)
   endif()

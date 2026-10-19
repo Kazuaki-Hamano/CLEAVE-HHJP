@@ -4,11 +4,15 @@
 #include "../../src/trackpad_pointer.c"
 static int64_t now = 1000;
 static struct cleave_trackpad_config cfg = {30, 0, 300, 1, 100, 100};
-static uint32_t config_generation=1;
+static uint32_t config_generation=1, left_generation=1;
 int64_t k_uptime_get(void) { return now; }
 void cleave_trackpad_get(struct cleave_trackpad_config *out, uint32_t *generation) {
     *out = cfg;
     *generation = config_generation;
+}
+void cleave_trackpad_get_scroll(struct cleave_trackpad_config *out, uint32_t *generation) {
+    *out = cfg;
+    *generation = left_generation;
 }
 static int move(struct device *dev, int x) {
     struct input_event e = {.type=INPUT_EV_REL, .code=INPUT_REL_X, .value=x};
@@ -18,13 +22,6 @@ static int move(struct device *dev, int x) {
     pointer_api.handle_event(dev, &e, 0, 0, NULL);
     now += 10;
     return result;
-}
-static int scroll(struct device *dev) {
-    struct input_event e = {.type=INPUT_EV_REL, .code=INPUT_REL_Y, .value=-8, .sync=true};
-    scroll_api.handle_event(dev, &e, 0, 0, NULL);
-    assert(e.code == INPUT_REL_WHEEL);
-    now += 10;
-    return e.value;
 }
 
 static bool fn;
@@ -50,8 +47,6 @@ int main(void) {
     local_packet(8,-8,&h,&v);assert(h==0 && v==0);
     assert(move(&right,1)==1); /* Local scrolling does not affect pointer fractions. */
     local_packet(8,-8,&h,&v);assert(h==1 && v==1);
-    right.data=&remote_scroll;
-    assert(scroll(&right)==0 && scroll(&right)==1);
     fn=true;
     right.data=&remote_pointer;
     assert(move(&right,10)==3); /* Fn must not suppress right cursor movement. */
@@ -95,5 +90,17 @@ int main(void) {
     fn=true;local_packet(32,0,&h,&v);
     cleave_trackpad_reset_local(); /* Fn released/repressed without intervening pad events. */
     local_packet(32,0,&h,&v);assert(navigation_count==3);
-    puts("Local 2D scroll, Fn swipe direction/threshold/latch/rearm, right isolation: PASS");
+    /* Changing either DYA group must preserve the other pad's partial packet. */
+    fn=false; now+=200; cfg.speed=30; cfg.scroll=100;
+    config_generation++; left_generation++;
+    assert(move(&right,1)==0 && move(&right,1)==0 && move(&right,1)==0);
+    cfg.scroll=200; left_generation++;
+    assert(move(&right,1)==1); /* Left edit retains right fractional cursor motion. */
+    local_packet(8,-8,&h,&v);assert(h==1 && v==1);
+    cfg.scroll=100;left_generation++;
+    local_packet(8,-8,&h,&v);assert(h==0 && v==0);
+    cfg.speed=100;config_generation++;
+    local_packet(8,-8,&h,&v);assert(h==1 && v==1); /* Right edit retains left fractions. */
+    assert(move(&right,1)==1);
+    puts("Local 2D scroll, Fn navigation, native wheel and independent DYA edit generations: PASS");
 }

@@ -30,10 +30,7 @@
 		compatible = "cleave,input-processor-trackpad";
 		#input-processor-cells = <0>;
 	};
-	trackpad_scroll: trackpad_scroll {
-		compatible = "cleave,input-processor-trackpad";
-		#input-processor-cells = <0>;
-	};
+
 };
 
 &kscan0 {
