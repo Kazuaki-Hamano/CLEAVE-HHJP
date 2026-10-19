@@ -33,6 +33,12 @@ manifest:
     - name: zmk-feature-module-physical-layout
       remote: cormoran
       revision: 4f18de45dc27820725d267916b4cdacc0e0b6cf9 # main
+    - name: zmk-feature-device-info
+      remote: cormoran
+      revision: 8cedd2dd9f04e19ea5a17b94914dd47a09d8db11 # inspected diagnostic module
+    - name: zmk-feature-kscan-diagnostics
+      remote: cormoran
+      revision: 1432f7fe0cfe903cd7d3c9931ae6bd6f2e1f328e # inspected diagnostic module
     - name: zmk-rgbled-widget
       remote: caksoylar
       revision: e6b467792a1dabef8cfa5c9fd26bfefc9c16662b # Zephyr 4.1 / current endpoint API
