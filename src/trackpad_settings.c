@@ -32,11 +32,11 @@ ZMK_RPC_CUSTOM_SUBSYSTEM(cleave_left_scroll, &trackpad_meta, settings_only_reque
         ZMK_CUSTOM_SETTING_PERMISSION_UNSECURE, ZMK_CUSTOM_SETTING_PERMISSION_UNSECURE,     \
         ZMK_CUSTOM_SETTING_RANGE_INT32(lo, hi))
 
-TP_INT(right_speed, "cleave_right_trackpad", "right_speed_percent", 200, 30, 800);
+TP_INT(right_speed, "cleave_right_trackpad", "speed_percent", 200, 30, 800);
 TP_INT(right_acceleration, "cleave_right_trackpad", "acceleration_percent", 0, 0, 300);
-TP_INT(right_maximum, "cleave_right_trackpad", "right_max_gain_percent", 300, 100, 800);
+TP_INT(right_maximum, "cleave_right_trackpad", "max_gain_percent", 300, 100, 800);
 TP_INT(right_native_scroll, "cleave_right_trackpad", "native_scroll_percent", 100, 10, 400);
-TP_INT(left_scroll, "cleave_left_scroll", "left_scroll_percent", 100, 10, 400);
+TP_INT(left_scroll, "cleave_left_scroll", "scroll_percent", 100, 10, 400);
 
 static struct k_spinlock config_lock;
 static struct cleave_trackpad_config config = {200, 0, 300, 1, 100, 100};
@@ -69,9 +69,52 @@ static void apply_field(const struct setting_field *field) {
     }
     k_spin_unlock(&config_lock, key);
 }
+/* The three old names that fit Zephyr's storage limit may already be saved.
+ * Migrate once, preferring an existing new record, then remove the old record
+ * so a later Reset cannot resurrect it. Never import the former Windows blob. */
+struct stored_int { bool found; int32_t value; };
+static int read_stored_int(const char *name, size_t len, settings_read_cb read_cb,
+                           void *cb_arg, void *param) {
+    struct stored_int *stored = param;
+    if (name && name[0]) { return 0; } /* Exact record only. */
+    if (len == sizeof(stored->value) &&
+        read_cb(cb_arg, &stored->value, sizeof(stored->value)) == sizeof(stored->value)) {
+        stored->found = true;
+    }
+    return 0;
+}
+static void migrate_trackpad_keys(void) {
+    static const struct {
+        const struct zmk_custom_setting *setting;
+        const char *old_path;
+        const char *new_path;
+    } migrations[] = {
+        {&right_speed, "custom_settings/cleave_right_trackpad/right_speed_percent",
+                       "custom_settings/cleave_right_trackpad/speed_percent"},
+        {&right_maximum, "custom_settings/cleave_right_trackpad/right_max_gain_percent",
+                         "custom_settings/cleave_right_trackpad/max_gain_percent"},
+        {&left_scroll, "custom_settings/cleave_left_scroll/left_scroll_percent",
+                      "custom_settings/cleave_left_scroll/scroll_percent"},
+    };
+    for (size_t i = 0; i < ARRAY_SIZE(migrations); i++) {
+        struct stored_int old = {0}, current = {0};
+        if (settings_load_subtree_direct(migrations[i].old_path, read_stored_int, &old) < 0 ||
+            !old.found) { continue; }
+        if (settings_load_subtree_direct(migrations[i].new_path, read_stored_int, &current) < 0) {
+            continue;
+        }
+        if (!current.found &&
+            zmk_custom_setting_set_int32(migrations[i].setting, old.value,
+                                         ZMK_CUSTOM_SETTING_WRITE_MODE_PERSIST) < 0) {
+            continue; /* Leave the source record intact for retry. */
+        }
+        settings_delete(migrations[i].old_path);
+    }
+}
 static int settings_event(const zmk_event_t *event) {
     if (as_zmk_custom_settings_initialized(event)) {
         /* Unlike SYS_INIT, this runs after persisted registry values load. */
+        migrate_trackpad_keys();
         for (size_t i = 0; i < ARRAY_SIZE(fields); i++) { apply_field(&fields[i]); }
     } else {
         const struct zmk_custom_setting_changed *changed = as_zmk_custom_setting_changed(event);

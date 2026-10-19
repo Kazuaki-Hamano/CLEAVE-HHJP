@@ -15,6 +15,7 @@ stub = r"""
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include "trackpad_settings.h"
 #define SETTINGS_MAX_NAME_LEN 64
 #define BUILD_ASSERT(cond,msg) _Static_assert(cond,msg)
@@ -34,6 +35,27 @@ struct zmk_custom_setting {struct zmk_custom_setting_value value;};
 struct zmk_rpc_custom_subsystem_meta {int unused,security;};
 typedef struct {int unused;} zmk_custom_CallRequest;
 typedef struct {int unused;} pb_callback_t;
+#define ZMK_CUSTOM_SETTING_WRITE_MODE_PERSIST 1
+typedef int (*settings_read_cb)(void *, void *, size_t);
+struct record {const char *path; int32_t value; bool present;};
+static struct record records[6];
+static bool fail_persist;
+static int stored_read(void *arg,void *out,size_t len) {memcpy(out,arg,len);return len;}
+static int settings_load_subtree_direct(const char *path,
+ int (*cb)(const char *,size_t,settings_read_cb,void *,void *),void *param) {
+ for(int i=0;i<6;i++)if(records[i].present && strcmp(records[i].path,path)==0)
+  cb("",4,stored_read,&records[i].value,param);
+ return 0;
+}
+static int settings_delete(const char *path) {
+ for(int i=0;i<6;i++)if(records[i].path && strcmp(records[i].path,path)==0)records[i].present=false;
+ return 0;
+}
+static int zmk_custom_setting_set_int32(const struct zmk_custom_setting *setting,int32_t v,int mode) {
+ if(fail_persist)return -1;
+ ((struct zmk_custom_setting *)setting)->value.int32_value=v;
+ return 0;
+}
 struct k_spinlock {int unused;};
 typedef int k_spinlock_key_t;
 static int k_spin_lock(struct k_spinlock *p) {return 0;}
@@ -55,6 +77,19 @@ static void notify(struct zmk_custom_setting *s,int value) {
 }
 int main(void) {
  struct cleave_trackpad_config c;uint32_t rg,lg;
+ records[0]=(struct record){"custom_settings/cleave_right_trackpad/right_speed_percent",150,true};
+ records[1]=(struct record){"custom_settings/cleave_right_trackpad/speed_percent",250,true};
+ right_speed.value.int32_value=250; /* New registry record already loaded. */
+ migrate_trackpad_keys();assert(right_speed.value.int32_value==250 && !records[0].present);
+ records[0].present=true;records[1].present=false;fail_persist=true;
+ migrate_trackpad_keys();assert(records[0].present && right_speed.value.int32_value==250);
+ fail_persist=false;migrate_trackpad_keys();assert(!records[0].present && right_speed.value.int32_value==150);
+ right_speed.value.int32_value=200;migrate_trackpad_keys();assert(right_speed.value.int32_value==200);
+ records[2]=(struct record){"custom_settings/cleave_right_trackpad/right_max_gain_percent",500,true};
+ records[3]=(struct record){"custom_settings/cleave_left_scroll/left_scroll_percent",70,true};
+ migrate_trackpad_keys();assert(right_maximum.value.int32_value==500 && left_scroll.value.int32_value==70);
+ assert(!records[2].present && !records[3].present);
+ right_maximum.value.int32_value=300;left_scroll.value.int32_value=100;
  cleave_trackpad_get(&c,&rg);assert(c.speed==200 && c.scroll==100 && rg==1);
  right_speed.value.int32_value=500;left_scroll.value.int32_value=170;
  zmk_event_t init={.kind=1};settings_event(&init);
@@ -75,7 +110,7 @@ int main(void) {
  assert(c.speed==200 && c.scroll==180 && rg==4 && lg==3);
  struct zmk_custom_setting unrelated={0};notify(&unrelated,123);
  cleave_trackpad_get(&c,&rg);assert(c.speed==200 && rg==4);
- puts("DYA adapter: loaded values, updates/discard, failed reads, unrelated events and independent generations: PASS");
+ puts("DYA adapter: key migration, new-value precedence, retry/reset safety, loaded values, updates/discard, failed reads, unrelated events and independent generations: PASS");
 }
 """
 subprocess.run(["wsl", "--", "bash", "-lc", "gcc -std=c11 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wno-misleading-indentation -I src -x c -o /tmp/cleave-trackpad-registry - && /tmp/cleave-trackpad-registry"], input=(stub + source + test).encode(), check=True)

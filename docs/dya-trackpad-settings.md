@@ -14,11 +14,11 @@ Custom settings are grouped by registered subsystem:
 
 | Subsystem | Key | Default | Range | Applies to |
 | --- | --- | --- | --- | --- |
-| cleave_right_trackpad | right_speed_percent | 200 | 30-800 | Right cursor base speed |
+| cleave_right_trackpad | speed_percent | 200 | 30-800 | Right cursor base speed |
 | cleave_right_trackpad | acceleration_percent | 0 | 0-300 | Right cursor acceleration |
-| cleave_right_trackpad | right_max_gain_percent | 300 | 100-800 | Right cursor acceleration gain cap, before base speed |
+| cleave_right_trackpad | max_gain_percent | 300 | 100-800 | Right cursor acceleration gain cap, before base speed |
 | cleave_right_trackpad | native_scroll_percent | 100 | 10-400 | Right ASIC wheel events only |
-| cleave_left_scroll | left_scroll_percent | 100 | 10-400 | Left vertical and horizontal scrolling |
+| cleave_left_scroll | scroll_percent | 100 | 10-400 | Left vertical and horizontal scrolling |
 
 All values are integer percentages. Native-scroll amount is a separate right-side setting, not cursor speed. Left is always the dedicated 2D scroll pad, with Fn back/forward swipes unchanged. ASIC sensitivity stays fixed at 1x. The existing navigation threshold/direction and scrolling direction are not made configurable in this first stage.
 
@@ -46,6 +46,8 @@ Source commit `c876370e`; both UF2s report firmware ID `63390cea`. Artifacts: `o
 
 The first trial registered `right_acceleration_percent` and `right_native_scroll_percent` under `cleave_right_trackpad`. With the `custom_settings/` storage prefix, their storage paths required 65 and 66 bytes including NUL, exceeding the pinned Zephyr `SETTINGS_MAX_NAME_LEN` of 64. The registry permits RAM writes but returns `-ENAMETOOLONG` during persistence, reported by DYA as "Failed to process request". Partial saves are possible: the other two right keys fit and may already be saved.
 
-The correction renames only those two keys to `acceleration_percent` and `native_scroll_percent`. Their prior names could not persist; re-enter their values after flashing. Existing `right_speed_percent`, `right_max_gain_percent` and left settings retain their names. All five storage paths now fit (55-61 bytes including NUL). A production `BUILD_ASSERT` checks every declaration against Zephyr's real limit, and a host regression reproduces the old truncation and proves the guard rejects it. Processing, defaults and ranges are unchanged.
+All five item names now omit the role prefix: `speed_percent`, `acceleration_percent`, `max_gain_percent`, `native_scroll_percent`, and `scroll_percent`. The existing group names still identify right and left. Storage paths require 50-60 bytes including NUL. A production `BUILD_ASSERT` checks every declaration against Zephyr's real limit, and a host regression reproduces the old truncation and proves the guard rejects it. Processing, defaults and ranges are unchanged.
 
-Save-error fix firmware: build pending; hardware persistence confirmation pending.
+On the first boot, the three old keys that could persist (`right_speed_percent`, `right_max_gain_percent`, `left_scroll_percent`) are migrated. An already saved new key takes precedence. An old key is removed only after a successful copy, preventing a later reset from resurrecting it. Failed copies retain the source for retry. The two oversized old keys could never persist; re-enter their values after flashing. This is separate from the intentionally unsupported legacy Windows settings blob.
+
+Save-error fix and prefix removal firmware: build pending; hardware persistence confirmation pending.
