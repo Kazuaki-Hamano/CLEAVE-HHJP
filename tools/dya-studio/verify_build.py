@@ -49,6 +49,11 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
         if "--stack-trial" in sys.argv:
             assert stack == 2048, (side, stack_setting, stack)
         print(side, "split worker stack:", stack)
+        if "--settings-sync" in sys.argv:
+            assert "modules/settings-rpc/src/activity_store.c" in config, (side, "activity store missing")
+            if side == "left":
+                assert "modules/settings-rpc/src/activity_sync.c" in config, "Durable outbox missing"
+            print(side, "activity sync/store compiled: PASS")
         if "--split-status" in sys.argv and side == "left":
             assert "modules/ble-management/src/studio/ble_management_handler.c" in config, "Local status adapter was not compiled"
             print(side, "local BLE management status adapter compiled: PASS")
