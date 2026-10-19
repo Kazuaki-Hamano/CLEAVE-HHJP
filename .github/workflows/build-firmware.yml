@@ -5,6 +5,8 @@ on:
       - main
       - feature/dya-studio
       - feature/dya-connection-settings
+      - feature/deep-sleep-trial
+      - feature/dya-activity-settings
     paths:
       - 'config/**'
       - 'src/**'
