@@ -16,6 +16,8 @@ stub = r"""
 #include <stddef.h>
 #include <stdio.h>
 #include "trackpad_settings.h"
+#define SETTINGS_MAX_NAME_LEN 64
+#define BUILD_ASSERT(cond,msg) _Static_assert(cond,msg)
 #define ARG_UNUSED(x) ((void)(x))
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
 #define ZMK_EV_EVENT_BUBBLE 0

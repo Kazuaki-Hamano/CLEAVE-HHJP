@@ -15,9 +15,9 @@ Custom settings are grouped by registered subsystem:
 | Subsystem | Key | Default | Range | Applies to |
 | --- | --- | --- | --- | --- |
 | cleave_right_trackpad | right_speed_percent | 200 | 30-800 | Right cursor base speed |
-| cleave_right_trackpad | right_acceleration_percent | 0 | 0-300 | Right cursor acceleration |
+| cleave_right_trackpad | acceleration_percent | 0 | 0-300 | Right cursor acceleration |
 | cleave_right_trackpad | right_max_gain_percent | 300 | 100-800 | Right cursor acceleration gain cap, before base speed |
-| cleave_right_trackpad | right_native_scroll_percent | 100 | 10-400 | Right ASIC wheel events only |
+| cleave_right_trackpad | native_scroll_percent | 100 | 10-400 | Right ASIC wheel events only |
 | cleave_left_scroll | left_scroll_percent | 100 | 10-400 | Left vertical and horizontal scrolling |
 
 All values are integer percentages. Native-scroll amount is a separate right-side setting, not cursor speed. Left is always the dedicated 2D scroll pad, with Fn back/forward swipes unchanged. ASIC sensitivity stays fixed at 1x. The existing navigation threshold/direction and scrolling direction are not made configurable in this first stage.

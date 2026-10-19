@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/settings/settings.h>
 #include <zephyr/sys/util.h>
 #include <zmk/event_manager.h>
 #include <zmk/studio/custom.h>
@@ -23,6 +24,8 @@ ZMK_RPC_CUSTOM_SUBSYSTEM(cleave_right_trackpad, &trackpad_meta, settings_only_re
 ZMK_RPC_CUSTOM_SUBSYSTEM(cleave_left_scroll, &trackpad_meta, settings_only_request);
 
 #define TP_INT(name, subsystem, key, initial, lo, hi)                                       \
+    BUILD_ASSERT(sizeof("custom_settings/" subsystem "/" key) <= SETTINGS_MAX_NAME_LEN,       \
+                 "Trackpad setting storage name exceeds Zephyr settings buffer");           \
     ZMK_CUSTOM_SETTING_DEFINE(name, subsystem, key, ZMK_CUSTOM_SETTING_VALUE_TYPE_INT32,     \
         ZMK_CUSTOM_SETTING_VALUE_INT32(initial),                                           \
         ZMK_CUSTOM_SETTING_CONFIDENTIALITY_RPC_PUBLIC,                                     \
@@ -30,9 +33,9 @@ ZMK_RPC_CUSTOM_SUBSYSTEM(cleave_left_scroll, &trackpad_meta, settings_only_reque
         ZMK_CUSTOM_SETTING_RANGE_INT32(lo, hi))
 
 TP_INT(right_speed, "cleave_right_trackpad", "right_speed_percent", 200, 30, 800);
-TP_INT(right_acceleration, "cleave_right_trackpad", "right_acceleration_percent", 0, 0, 300);
+TP_INT(right_acceleration, "cleave_right_trackpad", "acceleration_percent", 0, 0, 300);
 TP_INT(right_maximum, "cleave_right_trackpad", "right_max_gain_percent", 300, 100, 800);
-TP_INT(right_native_scroll, "cleave_right_trackpad", "right_native_scroll_percent", 100, 10, 400);
+TP_INT(right_native_scroll, "cleave_right_trackpad", "native_scroll_percent", 100, 10, 400);
 TP_INT(left_scroll, "cleave_left_scroll", "left_scroll_percent", 100, 10, 400);
 
 static struct k_spinlock config_lock;

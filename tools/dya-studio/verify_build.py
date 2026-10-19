@@ -80,7 +80,7 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
         payload = b"".join(data[i + 32:i + 32 + int.from_bytes(data[i + 16:i + 20], "little")] for i in range(0, len(data), 512))
         if "--trackpad-settings" in sys.argv:
             assert "tp_sens" not in logs.read(next(n for n in logs.namelist() if side in n and "Devicetree file" in n)).decode(), (side, "legacy sensitivity behavior remains")
-            names = (b"cleave_right_trackpad", b"cleave_left_scroll", b"right_speed_percent", b"right_acceleration_percent", b"right_max_gain_percent", b"right_native_scroll_percent", b"left_scroll_percent")
+            names = (b"cleave_right_trackpad", b"cleave_left_scroll", b"right_speed_percent", b"acceleration_percent", b"right_max_gain_percent", b"native_scroll_percent", b"left_scroll_percent")
             if side == "left":
                 for name in names:
                     assert name + b"\x00" in payload, (side, name)
