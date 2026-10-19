@@ -49,6 +49,17 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
         if "--stack-trial" in sys.argv:
             assert stack == 2048, (side, stack_setting, stack)
         print(side, "split worker stack:", stack)
+        if "--host-layers" in sys.argv:
+            host_features = ("CONFIG_ZMK_OS_DETECTION=y", "CONFIG_ZMK_OS_DETECTION_STUDIO_RPC=y", "CONFIG_ZMK_OS_DETECTION_USB=y", "CONFIG_ZMK_OS_DETECTION_BLE=y", "CONFIG_ZMK_DEFAULT_LAYER=y", "CONFIG_ZMK_DEFAULT_LAYER_STUDIO_RPC=y", "CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION=y")
+            for setting in host_features:
+                assert bool(re.search(r"(?m) " + re.escape(setting) + r"$", config)) == (side == "left"), (side, setting)
+            for setting in ("CONFIG_ZMK_OS_DETECTION_LAYER_AUTO_SWITCH=y", "CONFIG_ZMK_OS_DETECTION_BLE_GATT_CLIENT_PROBE=y", "CONFIG_ZMK_OS_DETECTION_TEST_INJECT=y"):
+                assert not re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
+            if side == "left":
+                assert re.search(r"(?m) CONFIG_ZMK_KEYMAP_LAYER_REORDERING=y$", config), "Studio layer slots require layer reordering"
+                for unit in ("os_detection_usb.c", "os_detection_ble.c", "os_detection_settings.c", "default_layer.c", "default_layer_handler.c"):
+                    assert unit in config, unit
+            print(side, "host-layer config: PASS")
         if "--stability" in sys.argv:
             for setting in ("CONFIG_ZMK_WATCHDOG=y", "CONFIG_ZMK_WATCHDOG_FATAL_DETECT=y", "CONFIG_ZMK_WATCHDOG_FREEZE_DETECT=y", "CONFIG_ZMK_WATCHDOG_SPLIT_RELAY=y", "CONFIG_ZMK_WATCHDOG_MAX_INCIDENTS=16", "CONFIG_ZMK_WATCHDOG_FREEZE_TIMEOUT_MS=30000", "CONFIG_ZMK_WATCHDOG_FREEZE_STARTUP_DELAY_MS=30000", "CONFIG_ZMK_WATCHDOG_FREEZE_FEED_DIVISOR=2", "CONFIG_TASK_WDT=y"):
                 assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
@@ -95,7 +106,7 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
             else:
                 assert not re.search(r"(?m) CONFIG_ZMK_BLE_MANAGEMENT=y$", config), "BLE management must remain central-only"
             assert re.search(r"(?m) CONFIG_ZMK_IDLE_TIMEOUT=30000$", config), (side, "idle default changed")
-            for setting in ("CONFIG_ZMK_OS_DETECTION_LAYER_AUTO_SWITCH=y", "CONFIG_ZMK_DEFAULT_LAYER=y"):
+            for setting in (("CONFIG_ZMK_OS_DETECTION_LAYER_AUTO_SWITCH=y",) if "--host-layers" in sys.argv and side == "left" else ("CONFIG_ZMK_OS_DETECTION_LAYER_AUTO_SWITCH=y", "CONFIG_ZMK_DEFAULT_LAYER=y")):
                 assert not re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, "unexpected behavior change", setting)
             if "--deep-sleep" not in sys.argv:
                 assert not re.search(r"(?m) CONFIG_ZMK_SLEEP=y$", config), (side, "unexpected sleep enablement")
@@ -142,6 +153,17 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
         if "--stability" in sys.argv:
             for namespace in (b"cormoran__watchdog\0", b"cormoran__devtool\0"):
                 assert (namespace in payload) == (side == "left"), (side, namespace)
+        if "--host-layers" in sys.argv:
+            for namespace in (b"cormoran__os_detection\0", b"cormoran__default_layer\0"):
+                assert (namespace in payload) == (side == "left"), (side, namespace)
+        if "--host-layers" in sys.argv:
+            dts_entry = next(n for n in logs.namelist() if side in n and "Devicetree file" in n)
+            dts = logs.read(dts_entry).decode()
+            for slot in range(1, 5):
+                node = re.search(r"host_slot_" + str(slot) + r"\s*\{(.*?)\};", dts, re.S)
+                assert node and 'status = "disabled"' in node[1], (side, slot)
+                bindings = re.search(r"bindings\s*=\s*<(.*?)>;", node[1], re.S)
+                assert bindings and len(re.findall(r"&trans\b", bindings[1])) == 70, (side, slot)
         marker = re.search(rb"CLEAVE_HHJP_UPDATE1\|" + side.upper().encode() + rb"\|([0-9a-f]{8})", payload)
         assert marker, (side, "update identity missing")
         identities[side] = marker[1].decode()

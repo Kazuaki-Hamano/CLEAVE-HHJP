@@ -33,6 +33,9 @@ manifest:
     - name: zmk-feature-module-physical-layout
       remote: cormoran
       revision: 4f18de45dc27820725d267916b4cdacc0e0b6cf9 # main
+    - name: zmk-feature-os-detection
+      remote: cormoran
+      revision: 3052679f645b8fc1997275c2eaa6b86bdd55ca01 # inspected USB/BLE OS detection
     - name: zmk-feature-device-info
       remote: cormoran
       revision: 8cedd2dd9f04e19ea5a17b94914dd47a09d8db11 # inspected diagnostic module
