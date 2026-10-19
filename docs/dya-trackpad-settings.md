@@ -40,7 +40,7 @@ The old storage/polling tests are retired with that code. Processor tests retain
 4. Use DYA Save, reconnect and power cycle, and confirm saved values and actual motion persist. Also verify a memory-only edit followed by Discard and restore defaults using the relevant group scope if supported by the UI. Avoid global factory reset for this trial.
 5. Confirm one idle/deep-sleep/own-side-key-wake cycle: the removed sensitivity polling must not prevent sleep. Check DYA Connection and the Windows battery/updater information still load; no actual boot command is needed.
 
-Source commit `c876370e`; both UF2s report firmware ID `63390cea`. Artifacts: `output/firmware/c876370e/`, Actions run `39286178153`. UF2 integrity, actual merged Kconfig/Devicetree, central-only registry keys, retired Report 7, retained HID reports, split worker stacks, 30-minute deep sleep and keymap checks passed. Host tests passed for the production adapter event/cache behavior and independent pointer/scroll processing. `build-logs.zip` archives complete per-job logs with provenance. Real-device DYA visibility/edit/save and motion verification remain pending. Main is unchanged.
+Initial trial source commit `c876370e`; both UF2s report firmware ID `63390cea`. Artifacts: `output/firmware/c876370e/`, Actions run `39286178153`. UF2 integrity, actual merged Kconfig/Devicetree, central-only registry keys, retired Report 7, retained HID reports, split worker stacks, 30-minute deep sleep and keymap checks passed. Host tests passed for the production adapter event/cache behavior and independent pointer/scroll processing. `build-logs.zip` archives complete per-job logs with provenance. The user confirmed both groups are visible and live edits affect motion. Saving the right group failed; see the correction below. Main is unchanged.
 
 ## Save-error correction
 
@@ -50,4 +50,4 @@ All five item names now omit the role prefix: `speed_percent`, `acceleration_per
 
 On the first boot, the three old keys that could persist (`right_speed_percent`, `right_max_gain_percent`, `left_scroll_percent`) are migrated. An already saved new key takes precedence. An old key is removed only after a successful copy, preventing a later reset from resurrecting it. Failed copies retain the source for retry. The two oversized old keys could never persist; re-enter their values after flashing. This is separate from the intentionally unsupported legacy Windows settings blob.
 
-Save-error fix and prefix removal firmware: build pending; hardware persistence confirmation pending.
+Save-error fix and prefix removal source `405d4595`, firmware ID `db2f3d84`, Actions run `39295841308`, artifacts `output/firmware/405d4595/`. Both firmware builds and UF2/configuration/keymap checks passed, as did adapter migration and storage-name regression tests. Hardware save/power-cycle persistence confirmation remains pending.
