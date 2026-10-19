@@ -25,4 +25,19 @@ The fork loads persisted `activity/s` timeouts, if present, over compiled defaul
 
 After hardware acceptance, use a separate build with a normal timeout (proposed 30 minutes) before main integration. Do not merge the one-minute trial into main.
 
-Build/artifact checks and real-device acceptance pending.
+Source `daec4363`; matching firmware identity `b687fc98` on both halves.
+
+CI https://github.com/Kazuaki-Hamano/CLEAVE-HHJP/actions/runs/39275774780 passed all three builds. Actual merged configuration confirms deep sleep, 60000ms timeout, device PM and poweroff on both halves; both generated devicetrees retain matrix `wakeup-source`. UF2/HID, split roles/stacks, DYA connection configuration and existing keymap checks passed.
+
+The actual sensitivity poll was tested with deep sleep both disabled/enabled for all four power states: battery/unknown suppression only with sleep enabled, USB/charging requests, and periodic rescheduling passed. Existing actual packet reporter and saved-settings migration tests passed too.
+
+Artifacts copied with byte-for-byte verification to `V:/Projects/CLEAVE-HHJP/output/firmware/daec4363/`, including checksums and build logs. Verification commands from the build worktree:
+
+```powershell
+python tools/battery/verify_firmware.py output/firmware/daec4363
+python tools/dya-studio/verify_build.py output/firmware/daec4363 --stack-trial --connection --deep-sleep
+python tools/battery/dev/verify_current.py output/firmware/daec4363
+python tools/power/test_trackpad_sleep_poll.py
+```
+
+Real-device sleep/wake and battery savings remain unverified. No firmware was flashed by the assistant; main is unchanged.
