@@ -44,4 +44,8 @@ The user confirmed that both halves woke normally after the one-minute trial. Th
 
 ## Normal-use timeout build
 
-Following successful wake testing, both compiled sleep timeouts are changed from 60000ms to 1800000ms (30 minutes). No sleep/wake, trackpad-polling, keymap or BLE code changes accompany this timeout change. Build/artifact verification is pending. Main remains unchanged pending the normal-use build.
+Following successful wake testing, both compiled sleep timeouts are changed from 60000ms to 1800000ms (30 minutes). No sleep/wake, trackpad-polling, keymap or BLE code changes accompany this timeout change. Source `687bbed3`, matching firmware identity `512905b2`, artifacts `V:/Projects/CLEAVE-HHJP/output/firmware/687bbed3/` (byte-for-byte verified copy). Left/right complete job logs confirm successful compilation and `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=1800000` on both halves. UF2 integrity/HID, existing keymap, matrix wake sources, PM/poweroff, DYA and split-stack configuration checks passed. The reset UF2 was also downloaded and integrity-checked. GitHub run 39278638880 metadata remained queued despite published artifacts and available left/right job logs; no overall CI-success claim is made. `build-logs.zip` is assembled from the unmodified left/right per-job logs, with provenance in README.txt.
+
+Recheck the normal-use build with `python tools/dya-studio/verify_build.py output/firmware/687bbed3 --stack-trial --connection --deep-sleep --sleep-timeout-ms=1800000` plus the existing UF2/keymap verification scripts.
+
+Main remains unchanged; normal-duration use and battery savings remain to be evaluated. The 30-minute build is ready for the user to flash on both halves without a settings reset.
