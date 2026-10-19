@@ -10,6 +10,7 @@ import sys
 import zipfile
 
 root = Path(sys.argv[1])
+sleep_timeout_ms = next((int(arg.split("=", 1)[1]) for arg in sys.argv[2:] if arg.startswith("--sleep-timeout-ms=")), 60000)
 common = (
     "CONFIG_ZMK_SPLIT_RELAY_EVENT=y",
     "CONFIG_ZMK_SPLIT_RELAY_EVENT_DATA_LEN=240",
@@ -61,12 +62,12 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
                 assert not re.search(r"(?m) CONFIG_ZMK_SLEEP=y$", config), (side, "unexpected sleep enablement")
             print(side, "DYA connection config: PASS")
         if "--deep-sleep" in sys.argv:
-            for setting in ("CONFIG_ZMK_SLEEP=y", "CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=60000", "CONFIG_PM_DEVICE=y", "CONFIG_POWEROFF=y"):
+            for setting in ("CONFIG_ZMK_SLEEP=y", f"CONFIG_ZMK_IDLE_SLEEP_TIMEOUT={sleep_timeout_ms}", "CONFIG_PM_DEVICE=y", "CONFIG_POWEROFF=y"):
                 assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
             dts_entry = next(n for n in logs.namelist() if side in n and "Devicetree file" in n)
             dts = logs.read(dts_entry).decode()
             assert re.search(r"kscan_0\s*\{[^}]*wakeup-source;", dts, re.S), (side, "key matrix wake source missing")
-            print(side, "one-minute deep sleep and matrix wake source: PASS")
+            print(side, "deep sleep timeout and matrix wake source: PASS", sleep_timeout_ms)
         uf2 = next(root.glob("*" + side + "*.uf2"))
         data = uf2.read_bytes()
         payload = b"".join(data[i + 32:i + 32 + int.from_bytes(data[i + 16:i + 20], "little")] for i in range(0, len(data), 512))

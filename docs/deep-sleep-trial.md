@@ -40,4 +40,8 @@ python tools/battery/dev/verify_current.py output/firmware/daec4363
 python tools/power/test_trackpad_sleep_poll.py
 ```
 
-Real-device sleep/wake and battery savings remain unverified. No firmware was flashed by the assistant; main is unchanged.
+The user confirmed that both halves woke normally after the one-minute trial. This verifies the reported key-wake behavior on both halves. First-key delivery, exact current consumption and battery-life improvement were not reported separately. No firmware was flashed by the assistant.
+
+## Normal-use timeout build
+
+Following successful wake testing, both compiled sleep timeouts are changed from 60000ms to 1800000ms (30 minutes). No sleep/wake, trackpad-polling, keymap or BLE code changes accompany this timeout change. Build/artifact verification is pending. Main remains unchanged pending the normal-use build.
