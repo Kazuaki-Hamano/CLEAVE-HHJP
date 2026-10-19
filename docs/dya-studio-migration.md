@@ -36,4 +36,29 @@ The RGB LED module is updated and commit-pinned for the new endpoint API and XIA
 
 ## Validation status
 
-Implementation and CI validation are in progress. No real-device DYA connection or runtime behavior has been verified.
+Trial source commit: `203164f6`. Firmware identity: `692c95d6` on both halves.
+
+CI: https://github.com/Kazuaki-Hamano/CLEAVE-HHJP/actions/runs/39252611959 ? all three matrix entries passed.
+
+Artifacts: `output/firmware/203164f6/` in this worktree, with `checksums.json`, `dya-verification.json`, `keymap-verification.json`, and `build-logs.zip`.
+
+Passed checks:
+
+- UF2 block integrity/family, keyboard/mouse/battery/charging/update HID signatures, and existing central battery-fetch configuration.
+- Actual merged DYA configuration on both halves, with the local Cirque driver enabled and Zephyr's competing driver disabled.
+- Equal left/right update identities; settings-reset UF2 present.
+- 70-key layout; INT5/Fn, INT4/Fn, Kana, 200ms hold-tap; Fn mouse buttons and the side-specific native-scroll settings.
+- Existing actual-driver packet reporter and persisted trackpad storage migration tests.
+
+Memory use: left Flash 338736 bytes (41.98%), RAM 139260 bytes (53.12%); right Flash 229060 bytes (28.39%), RAM 86784 bytes (33.11%).
+
+Recheck artifacts with:
+
+```powershell
+python tools/battery/verify_firmware.py output/firmware/203164f6
+python tools/dya-studio/verify_build.py output/firmware/203164f6
+# Requires hidapi; use the existing battery build-env Python if needed.
+python tools/battery/dev/verify_current.py output/firmware/203164f6
+```
+
+The upstream build still reports warnings (including deprecated KSCAN and DYA source warnings); build success does not establish runtime correctness. No firmware has been flashed, no settings reset has been performed, and no real-device DYA connection or runtime behavior has been verified. Main remains unchanged. Complete the hardware acceptance steps above before integration.
