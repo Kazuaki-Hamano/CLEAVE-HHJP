@@ -74,3 +74,9 @@ The comparison trial changes only these worker stack capacities to 2048 bytes on
 Comparison build: source `e6a54b8b`, firmware identity `a2c6020d`, artifacts `output/firmware/e6a54b8b/`. CI https://github.com/Kazuaki-Hamano/CLEAVE-HHJP/actions/runs/39262505905 passed. UF2/HID, existing keymap, split roles, DYA configuration, and the 2048-byte worker stacks on both halves passed artifact inspection. On 2026-10-19, after testing this comparison build, the user reported that it operates normally (????????????). This confirms resolution of the reported right-power-on connection symptom for this test. It supports the split-worker stack-capacity hypothesis, but does not identify which worker overflowed or prove a specific fault without runtime logs. No reset was requested by the assistant; whether the user independently reset settings was not confirmed.
 
 Remaining before main integration: explicitly verify DYA Studio connection, layout/layer loading, one reversible key edit and save across reconnection/power cycle, then macro/combo operation and the existing trackpad/battery functionality. The general normal-operation report is not treated as confirmation of each of these individual checks.
+
+## DYA editing hardware acceptance
+
+The user subsequently confirmed the requested DYA Studio checks worked: layout/layer loading, a reversible key edit/save, and retention after power cycling. Together with the prior normal-operation report for `e6a54b8b` / `a2c6020d`, the baseline migration is accepted for main integration. Macro/combo-specific execution and official ZMK Studio interoperability have not been individually confirmed; they remain follow-up checks and are not claimed as hardware-verified.
+
+Integration includes the inherited battery/dual-trackpad branch history from main through `ab9b9c44`. Original worktree uncommitted build-guide and case changes are excluded. The tested firmware source is unchanged by these acceptance-record updates.
