@@ -1,0 +1,325 @@
+/*
+ * Copyright (c) 2026 cormoran
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+#include <string.h>
+
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/sys/util.h>
+
+#include <cormoran/default-layer/default_layer.h>
+#include <zmk/endpoints.h>
+#include <zmk/event_manager.h>
+#include <zmk/events/endpoint_changed.h>
+#include <zmk/keymap.h>
+
+#if IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
+#include <cormoran/zmk/custom_settings.h>
+#endif
+
+#if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION)
+#include <cormoran/os-detection/os_detection.h>
+#endif
+
+LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
+
+#define DEFAULT_LAYER_SUBSYSTEM_ID "cormoran__default_layer"
+
+/*
+ * Storage: when zmk-feature-custom-settings is enabled it is the only source
+ * of truth (persisted, RPC/web editable); otherwise fall back to plain
+ * in-memory arrays with no persistence, matching how this module behaved
+ * before it depended on custom settings.
+ */
+
+#if IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
+
+/*
+ * Two INT32 array settings, each registered once with
+ * ZMK_CUSTOM_SETTING_ARRAY_DEFINE: "endpoint_layer" (one element per endpoint)
+ * and "os_layer" (one per detected-OS bucket). This replaces the old
+ * per-element ZMK_CUSTOM_SETTING_ARRAY_ELEMENT_DEFINE + #if ladder, removed by
+ * that module's P3 rework in favour of one descriptor owning a single
+ * contiguous backing buffer for the whole array. Elements are read/written by
+ * index with zmk_custom_setting_{read,write}_array_by_key() below (unchanged).
+ *
+ * Every element defaults to ZMK_DEFAULT_LAYER_UNSET. The defaults arrays are
+ * plain pointers (not compound literals) sized to each key's compile-time
+ * maximum; the ARRAY_DEFINE only consumes the first _default_size entries.
+ * NO_CONSTRAINT (not RANGE_INT32) is used because the negative sentinels
+ * (UNSET, OS_DETECTION) fall outside a plain layer-index range - values are
+ * validated in is_valid_layer_value() instead.
+ */
+
+/* ZMK_ENDPOINT_COUNT = 1 (none) + up to 1 (USB) + up to 8 (BLE profiles). */
+BUILD_ASSERT(ZMK_ENDPOINT_COUNT <= 10,
+             "zmk-feature-default-layer only defines settings for up to 10 endpoints");
+
+ZMK_CUSTOM_SETTING_ARRAY_DEFAULT_INT32_DEFINE(default_layer_endpoint_defaults,
+                                              ZMK_DEFAULT_LAYER_UNSET, ZMK_DEFAULT_LAYER_UNSET,
+                                              ZMK_DEFAULT_LAYER_UNSET, ZMK_DEFAULT_LAYER_UNSET,
+                                              ZMK_DEFAULT_LAYER_UNSET, ZMK_DEFAULT_LAYER_UNSET,
+                                              ZMK_DEFAULT_LAYER_UNSET, ZMK_DEFAULT_LAYER_UNSET,
+                                              ZMK_DEFAULT_LAYER_UNSET, ZMK_DEFAULT_LAYER_UNSET);
+
+ZMK_CUSTOM_SETTING_ARRAY_DEFINE(default_layer_endpoint, DEFAULT_LAYER_SUBSYSTEM_ID,
+                                "endpoint_layer", ZMK_CUSTOM_SETTING_VALUE_TYPE_INT32,
+                                ZMK_ENDPOINT_COUNT, ZMK_ENDPOINT_COUNT,
+                                default_layer_endpoint_defaults,
+                                ZMK_CUSTOM_SETTING_CONFIDENTIALITY_RPC_PERSONAL,
+                                ZMK_CUSTOM_SETTING_PERMISSION_UNSECURE,
+                                ZMK_CUSTOM_SETTING_PERMISSION_SECURE,
+                                ZMK_CUSTOM_SETTING_NO_CONSTRAINT);
+
+ZMK_CUSTOM_SETTING_ARRAY_DEFAULT_INT32_DEFINE(default_layer_os_defaults, ZMK_DEFAULT_LAYER_UNSET,
+                                              ZMK_DEFAULT_LAYER_UNSET, ZMK_DEFAULT_LAYER_UNSET,
+                                              ZMK_DEFAULT_LAYER_UNSET, ZMK_DEFAULT_LAYER_UNSET,
+                                              ZMK_DEFAULT_LAYER_UNSET);
+
+ZMK_CUSTOM_SETTING_ARRAY_DEFINE(default_layer_os, DEFAULT_LAYER_SUBSYSTEM_ID, "os_layer",
+                                ZMK_CUSTOM_SETTING_VALUE_TYPE_INT32, ZMK_DEFAULT_LAYER_OS_COUNT,
+                                ZMK_DEFAULT_LAYER_OS_COUNT, default_layer_os_defaults,
+                                ZMK_CUSTOM_SETTING_CONFIDENTIALITY_RPC_PUBLIC,
+                                ZMK_CUSTOM_SETTING_PERMISSION_UNSECURE,
+                                ZMK_CUSTOM_SETTING_PERMISSION_SECURE,
+                                ZMK_CUSTOM_SETTING_NO_CONSTRAINT);
+
+#else /* !CONFIG_ZMK_CUSTOM_SETTINGS */
+
+static int32_t fallback_endpoint_layer[ZMK_ENDPOINT_COUNT];
+static int32_t fallback_os_layer[ZMK_DEFAULT_LAYER_OS_COUNT];
+
+#endif
+
+int32_t zmk_default_layer_get_endpoint(uint8_t endpoint_index) {
+#if IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
+    struct zmk_custom_setting_value value;
+    if (zmk_custom_setting_read_array_by_key(DEFAULT_LAYER_SUBSYSTEM_ID, "endpoint_layer",
+                                             endpoint_index, &value) != 0) {
+        return ZMK_DEFAULT_LAYER_UNSET;
+    }
+    return value.int32_value;
+#else
+    if (endpoint_index >= ZMK_ENDPOINT_COUNT) {
+        return ZMK_DEFAULT_LAYER_UNSET;
+    }
+    return fallback_endpoint_layer[endpoint_index];
+#endif
+}
+
+int32_t zmk_default_layer_get_os(uint8_t os) {
+#if IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
+    struct zmk_custom_setting_value value;
+    if (zmk_custom_setting_read_array_by_key(DEFAULT_LAYER_SUBSYSTEM_ID, "os_layer", os, &value) !=
+        0) {
+        return ZMK_DEFAULT_LAYER_UNSET;
+    }
+    return value.int32_value;
+#else
+    if (os >= ZMK_DEFAULT_LAYER_OS_COUNT) {
+        return ZMK_DEFAULT_LAYER_UNSET;
+    }
+    return fallback_os_layer[os];
+#endif
+}
+
+static bool is_valid_layer_value(int32_t value, bool allow_os_detection) {
+    if (value == ZMK_DEFAULT_LAYER_UNSET) {
+        return true;
+    }
+    if (allow_os_detection && value == ZMK_DEFAULT_LAYER_OS_DETECTION) {
+        return true;
+    }
+    return value >= 0 && value < ZMK_KEYMAP_LAYERS_LEN;
+}
+
+static void resolve_and_apply(const char *reason);
+
+int zmk_default_layer_set_endpoint(uint8_t endpoint_index, int32_t value, const char *command) {
+    if (endpoint_index >= ZMK_ENDPOINT_COUNT) {
+        return -EINVAL;
+    }
+    if (!is_valid_layer_value(value, true)) {
+        return -EINVAL;
+    }
+
+    int32_t previous = zmk_default_layer_get_endpoint(endpoint_index);
+    LOG_INF("default-layer command=%s target=endpoint index=%d from=%d to=%d", command,
+            endpoint_index, previous, value);
+
+#if IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
+    struct zmk_custom_setting_value setting_value = ZMK_CUSTOM_SETTING_VALUE_INT32(value);
+    int rc = zmk_custom_setting_write_array_by_key(DEFAULT_LAYER_SUBSYSTEM_ID, "endpoint_layer",
+                                                   endpoint_index, &setting_value,
+                                                   ZMK_CUSTOM_SETTING_WRITE_MODE_PERSIST);
+    if (rc != 0) {
+        return rc;
+    }
+#else
+    fallback_endpoint_layer[endpoint_index] = value;
+#endif
+
+    resolve_and_apply("update");
+    return 0;
+}
+
+int zmk_default_layer_set_os(uint8_t os, int32_t value, const char *command) {
+    if (os >= ZMK_DEFAULT_LAYER_OS_COUNT) {
+        return -EINVAL;
+    }
+    if (!is_valid_layer_value(value, false)) {
+        return -EINVAL;
+    }
+
+    int32_t previous = zmk_default_layer_get_os(os);
+    LOG_INF("default-layer command=%s target=os index=%d from=%d to=%d", command, os, previous,
+            value);
+
+#if IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
+    struct zmk_custom_setting_value setting_value = ZMK_CUSTOM_SETTING_VALUE_INT32(value);
+    int rc = zmk_custom_setting_write_array_by_key(DEFAULT_LAYER_SUBSYSTEM_ID, "os_layer", os,
+                                                   &setting_value,
+                                                   ZMK_CUSTOM_SETTING_WRITE_MODE_PERSIST);
+    if (rc != 0) {
+        return rc;
+    }
+#else
+    fallback_os_layer[os] = value;
+#endif
+
+    resolve_and_apply("update");
+    return 0;
+}
+
+/* Track only the layer owned by this feature; never sweep momentary Fn layers.
+ * IDs remain stable when Studio changes the layer order. */
+static zmk_keymap_layer_id_t managed_layer = ZMK_KEYMAP_LAYER_ID_INVAL;
+
+static void apply_layer(struct zmk_endpoint_instance endpoint, int endpoint_index,
+                        int32_t configured, int32_t layer, const char *reason) {
+    zmk_keymap_layer_id_t target = zmk_keymap_layer_index_to_id(layer);
+    zmk_keymap_layer_id_t global_default = zmk_keymap_layer_default();
+    if (target == ZMK_KEYMAP_LAYER_ID_INVAL) {
+        target = global_default;
+    }
+    if (managed_layer != ZMK_KEYMAP_LAYER_ID_INVAL && managed_layer != target) {
+        int rc = zmk_keymap_layer_deactivate(managed_layer, true);
+        if (rc != 0) {
+            LOG_WRN("default-layer deactivate failed: %d", rc);
+            return;
+        }
+        managed_layer = ZMK_KEYMAP_LAYER_ID_INVAL;
+    }
+    if (target != global_default) {
+        int rc = zmk_keymap_layer_activate(target, true);
+        if (rc != 0) {
+            LOG_WRN("default-layer activate failed: %d", rc);
+            return;
+        }
+        managed_layer = target;
+    }
+}
+
+static int32_t resolve_value(int32_t configured) {
+    int32_t resolved = configured;
+
+    if (configured == ZMK_DEFAULT_LAYER_OS_DETECTION) {
+        uint8_t os = 0;
+#if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION)
+        os = (uint8_t)zmk_os_detection_current();
+#endif
+        resolved = zmk_default_layer_get_os(os);
+    }
+
+    if (resolved == ZMK_DEFAULT_LAYER_UNSET) {
+        resolved = zmk_keymap_layer_default();
+    }
+
+    return resolved;
+}
+
+int32_t zmk_default_layer_resolve_current(void) {
+    struct zmk_endpoint_instance endpoint = zmk_endpoint_get_selected();
+    int endpoint_index = zmk_endpoint_instance_to_index(endpoint);
+    return resolve_value(zmk_default_layer_get_endpoint(endpoint_index));
+}
+
+static void resolve_and_apply(const char *reason) {
+    struct zmk_endpoint_instance endpoint = zmk_endpoint_get_selected();
+    int endpoint_index = zmk_endpoint_instance_to_index(endpoint);
+    int32_t configured = zmk_default_layer_get_endpoint(endpoint_index);
+    int32_t resolved = resolve_value(configured);
+
+    apply_layer(endpoint, endpoint_index, configured, resolved, reason);
+}
+
+void zmk_default_layer_resolve_and_apply(const char *reason) { resolve_and_apply(reason); }
+
+#if !IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
+static void default_layer_init_work_handler(struct k_work *work) { resolve_and_apply("init"); }
+
+static K_WORK_DELAYABLE_DEFINE(default_layer_init_work, default_layer_init_work_handler);
+#endif
+
+static int default_layer_init(void) {
+#if !IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
+    for (int i = 0; i < ZMK_ENDPOINT_COUNT; i++) {
+        fallback_endpoint_layer[i] = ZMK_DEFAULT_LAYER_UNSET;
+    }
+    for (int i = 0; i < ZMK_DEFAULT_LAYER_OS_COUNT; i++) {
+        fallback_os_layer[i] = ZMK_DEFAULT_LAYER_UNSET;
+    }
+    /* No custom-settings backend: nothing is persisted, so there is no load to
+     * wait for. Defer the first apply off this SYS_INIT hook so the keymap /
+     * endpoint subsystems are ready. */
+    k_work_schedule(&default_layer_init_work, K_MSEC(200));
+#endif
+    /* With CONFIG_ZMK_CUSTOM_SETTINGS the initial apply is driven by the
+     * zmk_custom_settings_initialized event instead (see the listener below):
+     * it is raised exactly once, strictly after settings_load() has populated
+     * every persisted value, so the first apply reads the effective persisted
+     * layers rather than racing the load from a fixed delay. */
+    return 0;
+}
+SYS_INIT(default_layer_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
+
+static int default_layer_listener(const zmk_event_t *eh) {
+    if (as_zmk_endpoint_changed(eh)) {
+        resolve_and_apply("endpoint-change");
+        return ZMK_EV_EVENT_BUBBLE;
+    }
+#if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION)
+    if (as_zmk_os_changed(eh)) {
+        resolve_and_apply("os-change");
+        return ZMK_EV_EVENT_BUBBLE;
+    }
+#endif
+#if IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
+    if (as_zmk_custom_settings_initialized(eh)) {
+        /* Fired once, after settings_load() has populated every persisted
+         * value - the race-free point to apply the persisted layers at boot. */
+        resolve_and_apply("settings-initialized");
+        return ZMK_EV_EVENT_BUBBLE;
+    }
+    const struct zmk_custom_setting_changed *setting_ev = as_zmk_custom_setting_changed(eh);
+    if (setting_ev && setting_ev->setting && setting_ev->setting->custom_subsystem_id &&
+        strcmp(setting_ev->setting->custom_subsystem_id, DEFAULT_LAYER_SUBSYSTEM_ID) == 0) {
+        resolve_and_apply("setting-change");
+        return ZMK_EV_EVENT_BUBBLE;
+    }
+#endif
+    return ZMK_EV_EVENT_BUBBLE;
+}
+
+ZMK_LISTENER(default_layer, default_layer_listener);
+ZMK_SUBSCRIPTION(default_layer, zmk_endpoint_changed);
+#if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION)
+ZMK_SUBSCRIPTION(default_layer, zmk_os_changed);
+#endif
+#if IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
+ZMK_SUBSCRIPTION(default_layer, zmk_custom_settings_initialized);
+ZMK_SUBSCRIPTION(default_layer, zmk_custom_setting_changed);
+#endif

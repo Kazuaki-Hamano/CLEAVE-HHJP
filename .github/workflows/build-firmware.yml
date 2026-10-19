@@ -12,6 +12,7 @@ on:
       - feature/dya-settings-sync
       - feature/dya-diagnostics
       - feature/dya-stability-diagnostics
+      - feature/dya-host-layers
     paths:
       - 'config/**'
       - 'src/**'
