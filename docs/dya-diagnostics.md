@@ -27,12 +27,16 @@ No keyboard keymap, sensor driver, activity settings, pending settings outbox, B
 
 Source `f96a485b`, firmware ID `5b8f51d5`, Actions run `39311826345`, artifacts `output/firmware/f96a485b/`. UF2 integrity/HID, actual merged config/DTS, central-only diagnostic RPCs, both-side kscan collectors/relay and 4096-byte relay stacks passed. Existing split stacks, settings outbox, activity/trackpad settings, 30-minute sleep defaults and keymap checks passed. Left GNU build-id in actual UF2: `8d8989a7823c75b863b5d304f04bf4d5f5168e44`.
 
-Linker RAM usage is 150024/262144 bytes (57.23%) left and 95372/262144 (36.38%) right, up 8588 and 7180 bytes from the prior settings-sync trial. This is static linker allocation, not measured runtime stack headroom or power use. Complete per-job logs and SHA-256 manifest accompany the images. Hardware screen/relay/statistics acceptance remains pending. Main unchanged.
+Linker RAM usage is 150024/262144 bytes (57.23%) left and 95372/262144 (36.38%) right, up 8588 and 7180 bytes from the prior settings-sync trial. This is static linker allocation, not measured runtime stack headroom or power use. Complete per-job logs and SHA-256 manifest accompany the images. The user subsequently confirmed all requested checks passed; see the acceptance record below.
 
 ## Hardware acceptance
 
 1. Flash both trial UF2s without settings reset. Check normal keys, right cursor, left scroll and saved tuning/timeouts.
-2. Open DYA's ?? tab and expand Device Info/??????. Confirm build/hardware/runtime data loads and uptime changes after Refresh. Note any actual named device reported not ready rather than assuming the card itself is broken.
-3. Expand Key Switches/??????. Confirm topology/statistics load; press a few distinct keys on each half, refresh statistics and check their counts/positions. Confirm right-side topology can be retrieved while the right is awake.
+2. Open DYA's Troubleshooting tab and expand Device Info. Confirm build/hardware/runtime data loads and uptime changes after Refresh. Note any actual named device reported not ready rather than assuming the card itself is broken.
+3. Expand Key Switches. Confirm topology/statistics load; press a few distinct keys on each half, refresh statistics and check their counts/positions. Confirm right-side topology can be retrieved while the right is awake.
 4. Use Copy Support Report and check it contains device info and kscan data. No fabricated watchdog/PMW3610 results should appear.
 5. Leave the diagnostics idle/close the page and confirm normal sleep/wake remains usable. After restart, counters should begin again while saved keyboard settings remain.
+
+## Acceptance and integration
+
+On 2026-10-20, the user confirmed all requested diagnostics checks were successful after receiving the trial firmware and screen/statistics/support-report checks. This accepts device information and split key-switch diagnostics for main integration. Firmware source remains identical to tested `f96a485b` / firmware ID `5b8f51d5`. This does not claim hardware acceptance of watchdog incident logging or devtool stack usage, which are not enabled in this stage. Power consumption and runtime stack headroom remain unmeasured.
