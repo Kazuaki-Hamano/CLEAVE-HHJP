@@ -1,0 +1,3 @@
+description: Open a temporary Studio BLE discovery window
+compatible: "cleave,behavior-studio-ble-discovery"
+include: zero_param.yaml
