@@ -1,5 +1,7 @@
 # タッチパッド設定
 
+> DYA trackpad settings trial: see [../../docs/dya-trackpad-settings.md](../../docs/dya-trackpad-settings.md). Windows trackpad configuration is retired on this branch; battery and firmware-update support remain. Legacy protocol descriptions below are historical.
+
 対応ファームウェアと、`output/battery/dist/CLEAVE-Battery.exe`を使用します。初回は左右両方を更新します。最新版は`fdff9be9`です。右端スクロール設定版は左UF2とアプリを更新します。右側は内蔵スクロール対応版をそのまま使用できます。成果物とビルドIDは[生成物の保存場所](../../docs/generated-output.md)を参照してください。
 左側をUSB接続し、トレイアイコンを右クリックして「タッチパッド設定」を開きます。
 右側は通常どおり電源を入れ、左右を接続してください。

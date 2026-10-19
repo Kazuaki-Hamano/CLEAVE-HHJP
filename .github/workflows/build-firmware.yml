@@ -7,6 +7,7 @@ on:
       - feature/dya-connection-settings
       - feature/deep-sleep-trial
       - feature/dya-activity-settings
+      - feature/dya-trackpad-settings
     paths:
       - 'config/**'
       - 'src/**'

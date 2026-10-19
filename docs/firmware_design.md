@@ -1,5 +1,7 @@
 ﻿# ZMKファームウェア設計書
 
+> DYA trackpad settings trial: see [dya-trackpad-settings.md](dya-trackpad-settings.md). Windows trackpad configuration is retired on this branch; battery and firmware-update support remain. Legacy protocol descriptions below are historical.
+
 > DYA Studio trial branch: build/dependency changes and validation status are tracked in [dya-studio-migration.md](dya-studio-migration.md). The v0.3 build/runtime results below describe the pre-migration baseline.
 
 この文書は、このリポジトリのソース・設定・ビルド定義に対応します。
