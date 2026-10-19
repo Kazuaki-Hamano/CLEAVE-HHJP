@@ -133,7 +133,8 @@ static bool is_valid_layer_value(int32_t value, bool allow_os_detection) {
     if (allow_os_detection && value == ZMK_DEFAULT_LAYER_OS_DETECTION) {
         return true;
     }
-    return value >= 0 && value < ZMK_KEYMAP_LAYERS_LEN;
+    return value >= 0 && value < ZMK_KEYMAP_LAYERS_LEN &&
+           zmk_keymap_layer_index_to_id(value) != ZMK_KEYMAP_LAYER_ID_INVAL;
 }
 
 static void resolve_and_apply(const char *reason);

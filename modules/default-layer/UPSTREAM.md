@@ -9,4 +9,5 @@ Local change: track and release only the previously selected host layer by stabl
 layer ID, rather than sweeping an index range. Unrelated momentary layers (Fn)
 remain active during OS detection, settings changes and endpoint transitions.
 Invalid/deleted targets fall back to the global default layer.
-Endpoint and OS mappings remain stock unset defaults. Keymap unchanged.
+RPC writes reject layer slots that have not been added to the keymap.
+Endpoint and OS mappings remain stock unset defaults.
