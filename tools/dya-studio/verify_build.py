@@ -56,11 +56,18 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
             else:
                 assert not re.search(r"(?m) CONFIG_ZMK_BLE_MANAGEMENT=y$", config), "BLE management must remain central-only"
             assert re.search(r"(?m) CONFIG_ZMK_IDLE_TIMEOUT=30000$", config), (side, "idle default changed")
-            for setting in ("CONFIG_ZMK_SETTINGS_RPC=y", "CONFIG_ZMK_OS_DETECTION_LAYER_AUTO_SWITCH=y", "CONFIG_ZMK_DEFAULT_LAYER=y"):
+            for setting in ("CONFIG_ZMK_OS_DETECTION_LAYER_AUTO_SWITCH=y", "CONFIG_ZMK_DEFAULT_LAYER=y"):
                 assert not re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, "unexpected behavior change", setting)
             if "--deep-sleep" not in sys.argv:
                 assert not re.search(r"(?m) CONFIG_ZMK_SLEEP=y$", config), (side, "unexpected sleep enablement")
             print(side, "DYA connection config: PASS")
+        if "--activity-settings" in sys.argv:
+            for setting in ("CONFIG_ZMK_SETTINGS_RPC=y", "CONFIG_SETTINGS=y", "CONFIG_SETTINGS_NVS=y", "CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE=60000"):
+                assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
+            assert bool(re.search(r"(?m) CONFIG_ZMK_SETTINGS_RPC_STUDIO=y$", config)) == (side == "left"), (side, "wrong settings RPC transport role")
+            print(side, "activity settings RPC and persistence: PASS")
+        else:
+            assert not re.search(r"(?m) CONFIG_ZMK_SETTINGS_RPC=y$", config), (side, "unexpected settings RPC")
         if "--deep-sleep" in sys.argv:
             for setting in ("CONFIG_ZMK_SLEEP=y", f"CONFIG_ZMK_IDLE_SLEEP_TIMEOUT={sleep_timeout_ms}", "CONFIG_PM_DEVICE=y", "CONFIG_POWEROFF=y"):
                 assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
