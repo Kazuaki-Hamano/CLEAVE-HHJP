@@ -13,6 +13,7 @@ on:
       - feature/dya-diagnostics
       - feature/dya-stability-diagnostics
       - feature/dya-host-layers
+      - feature/dya-layout-stagger
     paths:
       - 'config/**'
       - 'src/**'
