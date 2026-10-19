@@ -1,1 +1,2 @@
 rsource "src/pinnacle/Kconfig"
+rsource "modules/ble-management/Kconfig"

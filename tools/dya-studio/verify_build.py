@@ -49,6 +49,9 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
         if "--stack-trial" in sys.argv:
             assert stack == 2048, (side, stack_setting, stack)
         print(side, "split worker stack:", stack)
+        if "--split-status" in sys.argv and side == "left":
+            assert "modules/ble-management/src/studio/ble_management_handler.c" in config, "Local status adapter was not compiled"
+            print(side, "local BLE management status adapter compiled: PASS")
         if "--connection" in sys.argv:
             if side == "left":
                 for setting in ("CONFIG_ZMK_BLE_MANAGEMENT=y", "CONFIG_ZMK_BLE_MANAGEMENT_STUDIO_RPC=y"):
