@@ -49,6 +49,11 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
         if "--stack-trial" in sys.argv:
             assert stack == 2048, (side, stack_setting, stack)
         print(side, "split worker stack:", stack)
+        if "--settings-sync" in sys.argv:
+            assert "modules/settings-rpc/src/activity_store.c" in config, (side, "activity store missing")
+            if side == "left":
+                assert "modules/settings-rpc/src/activity_sync.c" in config, "Durable outbox missing"
+            print(side, "activity sync/store compiled: PASS")
         if "--split-status" in sys.argv and side == "left":
             assert "modules/ble-management/src/studio/ble_management_handler.c" in config, "Local status adapter was not compiled"
             print(side, "local BLE management status adapter compiled: PASS")
@@ -91,6 +96,10 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
             else:
                 assert b"cleave_right_trackpad\x00" not in payload, "Tuning must live on central only"
             print(side, "role-specific DYA trackpad settings and retired legacy transport: PASS")
+        if "--settings-sync" in sys.argv:
+            assert b"activity/s\0" in payload, (side, "Activity persistence key missing")
+            assert (b"cleave_sync/activity\0" in payload) == (side == "left"), (side, "Outbox must be central-only")
+            print(side, "activity persistence/outbox image keys: PASS")
         marker = re.search(rb"CLEAVE_HHJP_UPDATE1\|" + side.upper().encode() + rb"\|([0-9a-f]{8})", payload)
         assert marker, (side, "update identity missing")
         identities[side] = marker[1].decode()

@@ -9,6 +9,7 @@ on:
       - feature/dya-activity-settings
       - feature/dya-trackpad-settings
       - feature/dya-split-status
+      - feature/dya-settings-sync
     paths:
       - 'config/**'
       - 'src/**'
