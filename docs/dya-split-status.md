@@ -16,10 +16,10 @@ The six required build/license files from cormoran/zmk-module-ble-management `57
 
 `python tools/dya-studio/test_split_status.py` compiles the actual production helper and actual GetSplitInfo handler with transport mocks for central, peripheral and non-split roles. It checks absent APIs, disconnect/connect/reconnect transitions, unavailable/disabled transports, unknown status values and unchanged role/bond fields. It does not prove real BLE transitions.
 
-Firmware build/artifact checks pending. Hardware verification pending. Main does not include this correction yet.
+Source `f02ed646`, firmware ID `aca4f108`, Actions run `39297992243` completed successfully. UF2 integrity/HID, actual merged Kconfig and Devicetree, local handler compilation, split roles/stacks, DYA activity/trackpad settings, 30-minute sleep defaults and keymap checks passed. Artifacts are in `output/firmware/f02ed646/`, including per-job log archive and SHA-256 manifest. Hardware verification remains pending. Main does not include this correction yet.
 
 ## Hardware acceptance
 
 1. Flash both trial UF2s without settings reset. Check normal typing, both pads and saved trackpad settings.
 2. A GetSplitInfo client should report disconnected with the right powered off, connected after right reconnection, and disconnected after right power-off is detected. Repeat reconnect and a deep-sleep/own-side-key-wake cycle.
-3. The original BLE management Web UI at https://cormoran.github.io/zmk-module-ble-management/ has a Split Keyboard card with Peripheral Status and a Refresh button in its source. If that published UI is usable, disconnect DYA first, connect the left over serial there, and use Refresh after each transition. Only the status query is needed; Reset Split Connection clears bonds and is not part of this test. Published UI compatibility has not been hardware verified.
+3. The original BLE management Web UI at https://cormoran.github.io/zmk-module-ble-management/ has a Split Keyboard card with Peripheral Status and a Refresh button in its source. The published HTML/JS was fetched successfully and contains those controls and GetSplitInfo. Runtime/hardware compatibility remains unverified. For testing, disconnect DYA first, connect the left over serial there, and use Refresh after each transition. Only the status query is needed; Reset Split Connection clears bonds and is not part of this test. Published UI compatibility has not been hardware verified.
