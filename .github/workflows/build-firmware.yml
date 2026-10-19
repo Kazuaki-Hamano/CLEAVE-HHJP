@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - feature/dya-studio
+      - feature/dya-connection-settings
     paths:
       - 'config/**'
       - 'src/**'
