@@ -61,14 +61,16 @@ python tools/dya-studio/verify_build.py output/firmware/203164f6
 python tools/battery/dev/verify_current.py output/firmware/203164f6
 ```
 
-The upstream build still reports warnings (including deprecated KSCAN and DYA source warnings); build success does not establish runtime correctness. No firmware has been flashed, no settings reset has been performed, and no real-device DYA connection or runtime behavior has been verified. Main remains unchanged. Complete the hardware acceptance steps above before integration.
+The upstream build still reports warnings (including deprecated KSCAN and DYA source warnings); build success does not establish runtime correctness. The first trial was flashed and exposed the split-connection failure recorded below. The subsequent stack-capacity comparison was user-confirmed to operate normally. DYA editing/persistence and full hardware acceptance remain to be checked. Main remains unchanged.
 
 ## Hardware failure report and first isolation trial
 
-The user reported that the left half works alone, but enabling the right half disrupts Bluetooth. Stage-1 hardware acceptance failed; do not integrate into main. The actual trial Kconfig confirms right is a split peripheral (no central role, one connection, empty device name), so the reported host-like behavior is not evidence that it was built as central.
+The user reported that the left half works alone, but enabling the right half disrupts Bluetooth. The initial stage-1 build failed hardware acceptance; the comparison result is recorded below. The actual trial Kconfig confirms right is a split peripheral (no central role, one connection, empty device name), so the reported host-like behavior is not evidence that it was built as central.
 
 First hypothesis to test: split command structures now contain the 240-byte relay payload union, but the left split-run worker still has a 512-byte stack and the right notify worker 756 bytes. The existing sensitivity poll sends a peripheral behavior every second, exercising this path after connection. This is a source-based hypothesis, not a proven crash cause; no runtime fault log is available.
 
 The comparison trial changes only these worker stack capacities to 2048 bytes on each side. Keep all pairing/settings intact for this comparison. Persisted pairing or service-cache incompatibility across the Zephyr upgrade remains another possibility; a settings reset has not been performed.
 
-Comparison build: source `e6a54b8b`, firmware identity `a2c6020d`, artifacts `output/firmware/e6a54b8b/`. CI https://github.com/Kazuaki-Hamano/CLEAVE-HHJP/actions/runs/39262505905 passed. UF2/HID, existing keymap, split roles, DYA configuration, and the 2048-byte worker stacks on both halves passed artifact inspection. Runtime symptom resolution is unverified.
+Comparison build: source `e6a54b8b`, firmware identity `a2c6020d`, artifacts `output/firmware/e6a54b8b/`. CI https://github.com/Kazuaki-Hamano/CLEAVE-HHJP/actions/runs/39262505905 passed. UF2/HID, existing keymap, split roles, DYA configuration, and the 2048-byte worker stacks on both halves passed artifact inspection. On 2026-10-19, after testing this comparison build, the user reported that it operates normally (????????????). This confirms resolution of the reported right-power-on connection symptom for this test. It supports the split-worker stack-capacity hypothesis, but does not identify which worker overflowed or prove a specific fault without runtime logs. No reset was requested by the assistant; whether the user independently reset settings was not confirmed.
+
+Remaining before main integration: explicitly verify DYA Studio connection, layout/layer loading, one reversible key edit and save across reconnection/power cycle, then macro/combo operation and the existing trackpad/battery functionality. The general normal-operation report is not treated as confirmation of each of these individual checks.
