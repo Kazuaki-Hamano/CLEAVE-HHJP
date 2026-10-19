@@ -38,4 +38,4 @@ python tools/dya-studio/verify_build.py output/firmware/d6f412b9 --stack-trial -
 python tools/battery/dev/verify_current.py output/firmware/d6f412b9
 ```
 
-Hardware acceptance is pending. Main remains at `95fdb6e5`; no trial firmware or settings reset was written by the assistant.
+On 2026-10-20, the user confirmed that the connection-management trial had no problems after the requested checks. This is hardware acceptance for integration. Optional host/output switching and individual battery/trackpad checks were not reported separately and are not claimed as independently verified. The upstream split-status and bond-removal limitations above remain. No firmware or settings reset was written by the assistant. The accepted firmware sources are unchanged by this record update.
