@@ -22,7 +22,7 @@ DYA connection/OS controls, generic settings, diagnostics, and a Cirque settings
 
 The new Zephyr includes its own Cirque driver and bindings. To retain CLEAVE's tested relative-mode driver (including native scroll, runtime sensitivity, and sleep interval), the local driver uses `cleave,pinnacle` / `CONFIG_CLEAVE_INPUT_PINNACLE`. This avoids both a duplicate devicetree binding and a Kconfig dependency cycle with Zephyr's `INPUT_PINNACLE`. The driver behavior and wiring are unchanged.
 
-The shield explicitly supplies XIAO LED aliases because rgbled-widget v0.3 only supplies them for the old board name.
+The RGB LED module is updated and commit-pinned for the new endpoint API and XIAO board name. The local input status callback includes Zephyr 4.1's new user-data argument. Both halves reserve a 4096-byte custom-settings worker stack.
 
 ## Acceptance before main integration
 

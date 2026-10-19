@@ -1,5 +1,7 @@
 ﻿# ZMKファームウェア設計書
 
+> DYA Studio trial branch: build/dependency changes and validation status are tracked in [dya-studio-migration.md](dya-studio-migration.md). The v0.3 build/runtime results below describe the pre-migration baseline.
+
 この文書は、このリポジトリのソース・設定・ビルド定義に対応します。
 組み立てと標準配布版の導入は[ビルドガイド](../build-guide/README.md)、Windowsアプリの操作は[バッテリーアプリ](../tools/battery/README.md)を参照してください。
 標準配布版と、このフォークで追加した機能は区別して扱います。

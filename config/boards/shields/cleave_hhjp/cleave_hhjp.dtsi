@@ -7,14 +7,6 @@
 #include <physical_layouts.dtsi>
 
 / {
-	/* rgbled-widget v0.3 only has the old seeeduino_xiao_ble board overlay.
-	 * Preserve the same LED aliases with Zephyr 4.1's xiao_ble target. */
-	aliases {
-		led-red = &led0;
-		led-green = &led1;
-		led-blue = &led2;
-	};
-
 	chosen {
 		zmk,physical-layout = &cleave_hhjp_physical_layout;
 	};
@@ -124,8 +116,4 @@
 		wakeup-source;
 		diode-direction = "col2row";
 	};
-};
-
-&{/leds} {
-	status = "okay";
 };

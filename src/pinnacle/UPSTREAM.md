@@ -12,3 +12,6 @@ event, before the final synchronized Y event. Only the right half enables it.
 SPI and the original movement/tap configuration remain unchanged.
 Bindings and Kconfig are retained with this driver so Actions builds the reviewed
 local source, rather than downloading an unpatched external module.
+
+For Zephyr 4.1, local bindings use `cleave,pinnacle` and Kconfig uses
+`CLEAVE_INPUT_PINNACLE` to avoid collisions with the new upstream driver.

@@ -205,7 +205,8 @@ BT_GATT_SERVICE_DEFINE(cleave_trackpad_service,
                             BT_GATT_PERM_READ_ENCRYPT, read_value, NULL, NULL));
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-static void receive_status(struct input_event *event) {
+static void receive_status(struct input_event *event, void *user_data) {
+    ARG_UNUSED(user_data);
     if (event->dev != DEVICE_DT_GET(DT_NODELABEL(trackpad_split)) ||
         event->type != INPUT_EV_MSC || event->code != CLEAVE_TRACKPAD_STATUS_CODE) { return; }
     uint8_t applied;
@@ -220,7 +221,7 @@ static void receive_status(struct input_event *event) {
     atomic_set(&transport_length, 4);
     atomic_set(&transport_stage, 9);
 }
-INPUT_CALLBACK_DEFINE(DEVICE_DT_GET(DT_NODELABEL(trackpad_split)), receive_status);
+INPUT_CALLBACK_DEFINE(DEVICE_DT_GET(DT_NODELABEL(trackpad_split)), receive_status, NULL);
 
 static int split_status(const zmk_event_t *event) {
     const struct zmk_split_peripheral_status_changed *status =

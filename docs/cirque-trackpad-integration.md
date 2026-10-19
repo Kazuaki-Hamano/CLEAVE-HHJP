@@ -1,5 +1,7 @@
 # TM040040-2024-302 組み込み
 
+> DYA Studio trial branch: build/dependency changes and validation status are tracked in [dya-studio-migration.md](dya-studio-migration.md). The v0.3 build/runtime results below describe the pre-migration baseline.
+
 取り付け作業は[TM040040タッチパッド取り付けガイド](../build-guide/06-TRACKPAD.md)を参照してください。この文書では配線とドライバー実装の詳細を扱います。
 
 対象: CLEAVE HHJP、XIAO nRF52840 Plus、ZMK v0.3-branch。
