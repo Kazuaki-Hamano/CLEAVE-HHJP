@@ -2,9 +2,13 @@
 
 Branch: `feature/deep-sleep-trial`, base main `80aab5d6`.
 
-Only the keyboard deep-sleep enablement and inactivity timeout change on both halves: `CONFIG_ZMK_SLEEP=y`, `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=60000` (one minute). The existing 30-second idle state, Cirque sleep interval, pointer processing, keymap, DYA modules, and 2048-byte split stacks stay unchanged. No Settings RPC module, automatic settings reset, or bond clearing is added.
+The keyboard deep-sleep enablement and inactivity timeout change on both halves: `CONFIG_ZMK_SLEEP=y`, `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=60000` (one minute). The existing 30-second idle state, Cirque sleep interval, pointer processing, keymap, DYA modules, and 2048-byte split stacks stay unchanged. No Settings RPC module, automatic settings reset, or bond clearing is added.
 
 The key matrix already has `wakeup-source`. The local Cirque driver disables its data-ready interrupt during suspend, and the trackpad is not configured as a wake source. Touching the trackpad is therefore not the wake mechanism for this trial. Each sleeping half must be woken by a key on that half; a sleeping radio cannot receive a wake request from its peer.
+
+## Required activity fix
+
+The pinned ZMK activity callback treats every input event as activity. CLEAVE's one-second sensitivity status poll produces `INPUT_EV_MSC` replies on the central, so it would otherwise reset the idle timer indefinitely while the right is connected. With deep sleep enabled, polling is now performed only when the central detects USB power (charging or USB idle), where the USB settings app is available. Unknown/battery states skip the request and check power again after one second. Both ASICs already initialize to the fixed 1x sensitivity. Status freshness expires normally on battery; no stale acknowledgement is presented as current. Plugging in USB resumes polling and acknowledgement for the settings app. Pointer/key event handling is unchanged.
 
 ## Test
 

@@ -22,6 +22,7 @@
 #include "trackpad_settings.h"
 #include "trackpad_status.h"
 #include "trackpad_math.h"
+#include "charge_status.h"
 
 #define TP_SERVICE BT_UUID_128_ENCODE(0xb6f4a630, 0x3790, 0x4c3c, 0x934d, 0x911d84233b10)
 #define TP_VALUE BT_UUID_128_ENCODE(0xb6f4a631, 0x3790, 0x4c3c, 0x934d, 0x911d84233b10)
@@ -241,6 +242,16 @@ static void poll(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(poll_work, poll);
 static void poll(struct k_work *work) {
     ARG_UNUSED(work);
+#if IS_ENABLED(CONFIG_ZMK_SLEEP)
+    /* Status replies are INPUT_EV_MSC events: ZMK counts every input event
+     * as activity. Polling on battery would keep the central awake forever.
+     * Tuning uses USB, and both ASICs initialize to the fixed 1x setting. */
+    uint8_t power = cleave_local_power_state();
+    if (power != CLEAVE_POWER_USB_IDLE && power != CLEAVE_POWER_CHARGING) {
+        k_work_reschedule(&poll_work, K_SECONDS(1));
+        return;
+    }
+#endif
     struct cleave_trackpad_config cfg;
     cleave_trackpad_get(&cfg, NULL);
     struct zmk_behavior_binding binding = {
