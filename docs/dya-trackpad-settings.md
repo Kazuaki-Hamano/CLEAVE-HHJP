@@ -4,7 +4,13 @@ Branch `feature/dya-trackpad-settings`, based on main `fd760238`.
 
 ## User-facing settings
 
-In DYA Settings, custom settings are grouped by registered subsystem:
+Open the **Settings (??)** tab, scroll down and expand **Advanced Settings (????)**. Settings are loaded lazily only when this section is expanded. Find `cleave_right_trackpad` and `cleave_left_scroll` there; edit a value and save the affected section to persist it.
+
+The **Trackball** tab requires the runtime-input-processor RPC and PMW3610-specific driver RPC, neither of which this Cirque adapter implements. Its "subsystem not found" / no-processor display does not diagnose the generic settings editor. The **Subsystems** tab lists our two registered namespaces but has no Web UI link because the adapter intentionally supplies none. Use Settings ? Advanced Settings rather than either of those tabs.
+
+Verified against DYA Studio source `fa5f4ef55422f7f0806b28fc4d9da4ba41297400` (`SettingsPage.tsx`, `AdvancedSettingsSection.tsx`, `useCustomSettings.ts`). This confirms UI routing and the generic RPC contract; actual device listing/editing still requires hardware confirmation.
+
+Custom settings are grouped by registered subsystem:
 
 | Subsystem | Key | Default | Range | Applies to |
 | --- | --- | --- | --- | --- |
