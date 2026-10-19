@@ -24,7 +24,7 @@ No input/activity-marking events or polling of the right are added. The worker d
 
 `test_activity_rpc_wire.py --deps output/dya-research/nanopb-test-deps` also generates the unchanged settings proto with nanopb 0.4.9.1 and round-trips production Get/Set responses. It checks nested-message presence, rejection of missing settings, the actual queue call and failure response. Install test dependencies as described in dya-split-status.md.
 
-Source `e02374dd`, firmware ID `59e141ab`, Actions run `39304869644`, artifacts `output/firmware/e02374dd/`. All three UF2s were generated and checked for integrity. Both merged configs and image keys confirm the new stores, central-only outbox, existing split roles/stacks, DYA activity/trackpad support, 30-minute sleep defaults, retained HID and keymap. The production-code queue and real nanopb RPC tests passed. Per-job log archive and SHA-256 manifest accompany the UF2s. Hardware acceptance remains pending; main is unchanged.
+Source `e02374dd`, firmware ID `59e141ab`, Actions run `39304869644`, artifacts `output/firmware/e02374dd/`. All three UF2s were generated and checked for integrity. Both merged configs and image keys confirm the new stores, central-only outbox, existing split roles/stacks, DYA activity/trackpad support, 30-minute sleep defaults, retained HID and keymap. The production-code queue and real nanopb RPC tests passed. Per-job log archive and SHA-256 manifest accompany the UF2s. The user subsequently accepted the trial; see the acceptance record below.
 
 ## Hardware acceptance
 
@@ -33,3 +33,7 @@ Source `e02374dd`, firmware ID `59e141ab`, Actions run `39304869644`, artifacts 
 3. Turn right ON, wait roughly 5-10 seconds after split reconnection and refresh DYA Settings. Check that right reports the changed value and normal input still works.
 4. Power cycle both without a 70-second wait after delivery, and verify values persist. Separately, queue another change while right is OFF, restart left before right, then power right ON and check delivery. Avoid many rapid trial writes.
 5. Restore preferred timeouts and confirm one normal deep-sleep/own-side-key-wake cycle. Confirm later reconnects do not unexpectedly reset settings once the transaction is acknowledged.
+
+## Acceptance and integration
+
+On 2026-10-20, after receiving the trial UF2s and offline-change/reconnect/persistence checks, the user reported no apparent problems (????????). This is acceptance of the trial for main integration. Individual outcomes for central-reboot replay, deliberate write failures, or a new sleep/wake cycle were not separately reported and are not claimed as independently hardware verified. Firmware source remains identical to tested `e02374dd` / firmware ID `59e141ab`.
