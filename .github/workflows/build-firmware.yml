@@ -10,6 +10,7 @@ on:
       - feature/dya-trackpad-settings
       - feature/dya-split-status
       - feature/dya-settings-sync
+      - feature/dya-diagnostics
     paths:
       - 'config/**'
       - 'src/**'
