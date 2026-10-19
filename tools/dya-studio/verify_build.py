@@ -49,13 +49,29 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
         if "--stack-trial" in sys.argv:
             assert stack == 2048, (side, stack_setting, stack)
         print(side, "split worker stack:", stack)
+        if "--stability" in sys.argv:
+            for setting in ("CONFIG_ZMK_WATCHDOG=y", "CONFIG_ZMK_WATCHDOG_FATAL_DETECT=y", "CONFIG_ZMK_WATCHDOG_FREEZE_DETECT=y", "CONFIG_ZMK_WATCHDOG_SPLIT_RELAY=y", "CONFIG_ZMK_WATCHDOG_MAX_INCIDENTS=16", "CONFIG_ZMK_WATCHDOG_FREEZE_TIMEOUT_MS=30000", "CONFIG_ZMK_WATCHDOG_FREEZE_STARTUP_DELAY_MS=30000", "CONFIG_ZMK_WATCHDOG_FREEZE_FEED_DIVISOR=2", "CONFIG_TASK_WDT=y"):
+                assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
+            for setting in ("CONFIG_TASK_WDT_HW_FALLBACK=y", "CONFIG_ZMK_WATCHDOG_TEST_INJECTION=y", "CONFIG_ZMK_WATCHDOG_TEST=y", "CONFIG_ZMK_WATCHDOG_SPLIT_RELAY_TEST=y", "CONFIG_ZMK_DEVTOOL_LAYER_STATE=y", "CONFIG_ZMK_DEVTOOL_KEY_INJECTION=y", "CONFIG_ZMK_DEVTOOL_EVENT_TAP=y", "CONFIG_ZMK_DEVTOOL_LOG_CAPTURE=y", "CONFIG_ZMK_DEVTOOL_STUDIO_RPC_TEST=y"):
+                assert not re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
+            for unit in ("watchdog_freeze.c", "watchdog_fatal.c", "watchdog_relay.c"):
+                assert unit in config, (side, unit)
+            if side == "left":
+                for setting in ("CONFIG_ZMK_WATCHDOG_STUDIO_RPC=y", "CONFIG_ZMK_WATCHDOG_STUDIO_RPC_UNSECURED=y", "CONFIG_ZMK_DEVTOOL=y", "CONFIG_ZMK_DEVTOOL_STUDIO_RPC=y", "CONFIG_ZMK_DEVTOOL_STACK_USAGE=y", "CONFIG_THREAD_MONITOR=y", "CONFIG_THREAD_STACK_INFO=y", "CONFIG_THREAD_NAME=y", "CONFIG_INIT_STACKS=y"):
+                    assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
+                assert "devtool_stack.c" in config
+            else:
+                for setting in ("CONFIG_ZMK_WATCHDOG_STUDIO_RPC=y", "CONFIG_ZMK_DEVTOOL=y"):
+                    assert not re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
+            print(side, "watchdog detectors/relay and stack diagnostics config: PASS")
         if "--diagnostics" in sys.argv:
             for setting in ("CONFIG_ZMK_KSCAN_DIAGNOSTICS=y", "CONFIG_ZMK_KSCAN_DIAGNOSTICS_SPLIT=y", "CONFIG_ZMK_KSCAN_DIAGNOSTICS_MAX_POSITIONS=70", "CONFIG_ZMK_KSCAN_DIAGNOSTICS_RELAY_STACK_SIZE=4096"):
                 assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
             for unit in ("kscan_diagnostics_relay.c", "topology.c", "stats.c"):
                 assert unit in config, (side, unit)
-            for feature in ("CONFIG_ZMK_WATCHDOG=y", "CONFIG_ZMK_DEVTOOL=y"):
-                assert not re.search(r"(?m) " + re.escape(feature) + r"$", config), (side, feature)
+            if "--stability" not in sys.argv:
+                for feature in ("CONFIG_ZMK_WATCHDOG=y", "CONFIG_ZMK_DEVTOOL=y"):
+                    assert not re.search(r"(?m) " + re.escape(feature) + r"$", config), (side, feature)
             if side == "left":
                 for setting in ("CONFIG_ZMK_DEVICE_INFO=y", "CONFIG_ZMK_DEVICE_INFO_STUDIO_RPC=y", "CONFIG_HWINFO=y", "CONFIG_ZMK_KSCAN_DIAGNOSTICS_STUDIO_RPC=y", "CONFIG_ZMK_KSCAN_DIAGNOSTICS_STUDIO_RPC_UNSECURED=y"):
                     assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
@@ -123,6 +139,9 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
                 assert payload.count(note) == 1, "Expected one GNU build-id note in left UF2"
                 offset = payload.index(note) + len(note)
                 print(side, "GNU build-id:", payload[offset:offset+20].hex())
+        if "--stability" in sys.argv:
+            for namespace in (b"cormoran__watchdog\0", b"cormoran__devtool\0"):
+                assert (namespace in payload) == (side == "left"), (side, namespace)
         marker = re.search(rb"CLEAVE_HHJP_UPDATE1\|" + side.upper().encode() + rb"\|([0-9a-f]{8})", payload)
         assert marker, (side, "update identity missing")
         identities[side] = marker[1].decode()
