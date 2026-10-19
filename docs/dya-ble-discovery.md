@@ -60,3 +60,12 @@ Artifacts: `output/firmware/025d2c68/`, copied with matching SHA-256 hashes to t
 canonical workspace. Real Windows browser discovery, BLE RPC/edit/save, continued
 operation after expiry and sleep/wake still require hardware acceptance.
 Main is unchanged.
+
+## Hardware acceptance
+
+On 2026-10-20, the user confirmed successful Bluetooth connection to DYA Studio.
+This confirms browser discovery and connection and accepts the feature for main
+integration. The report did not separately confirm edit/save, operation beyond
+60 seconds or sleep/wake; those checks are not claimed hardware verified.
+Firmware source remains `025d2c68`, identity `d76ea2d0`. The merge requires no
+additional flash or settings reset.
