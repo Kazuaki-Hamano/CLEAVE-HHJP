@@ -70,3 +70,5 @@ The user reported that the left half works alone, but enabling the right half di
 First hypothesis to test: split command structures now contain the 240-byte relay payload union, but the left split-run worker still has a 512-byte stack and the right notify worker 756 bytes. The existing sensitivity poll sends a peripheral behavior every second, exercising this path after connection. This is a source-based hypothesis, not a proven crash cause; no runtime fault log is available.
 
 The comparison trial changes only these worker stack capacities to 2048 bytes on each side. Keep all pairing/settings intact for this comparison. Persisted pairing or service-cache incompatibility across the Zephyr upgrade remains another possibility; a settings reset has not been performed.
+
+Comparison build: source `e6a54b8b`, firmware identity `a2c6020d`, artifacts `output/firmware/e6a54b8b/`. CI https://github.com/Kazuaki-Hamano/CLEAVE-HHJP/actions/runs/39262505905 passed. UF2/HID, existing keymap, split roles, DYA configuration, and the 2048-byte worker stacks on both halves passed artifact inspection. Runtime symptom resolution is unverified.

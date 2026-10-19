@@ -40,6 +40,14 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
         for setting in common + (central if side == "left" else ()):
             assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
         assert not re.search(r"(?m) CONFIG_INPUT_PINNACLE=y$", config), "Upstream driver must not replace CLEAVE driver"
+        assert bool(re.search(r"(?m) CONFIG_ZMK_SPLIT_ROLE_CENTRAL=y$", config)) == (side == "left"), (side, "wrong split role")
+        if side == "right":
+            assert re.search(r"(?m) CONFIG_BT_MAX_CONN=1$", config), "Right must remain a single-link peripheral"
+        stack_setting = "CONFIG_ZMK_SPLIT_BLE_CENTRAL_SPLIT_RUN_STACK_SIZE" if side == "left" else "CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_STACK_SIZE"
+        stack = int(re.search(r"(?m) " + stack_setting + r"=(\d+)$", config)[1])
+        if "--stack-trial" in sys.argv:
+            assert stack == 2048, (side, stack_setting, stack)
+        print(side, "split worker stack:", stack)
         uf2 = next(root.glob("*" + side + "*.uf2"))
         data = uf2.read_bytes()
         payload = b"".join(data[i + 32:i + 32 + int.from_bytes(data[i + 16:i + 20], "little")] for i in range(0, len(data), 512))
