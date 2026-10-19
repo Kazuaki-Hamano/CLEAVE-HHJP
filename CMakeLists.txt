@@ -1,3 +1,5 @@
+add_subdirectory(modules/ble-management)
+
 if(CONFIG_SHIELD_CLEAVE_HHJP_LEFT OR CONFIG_SHIELD_CLEAVE_HHJP_RIGHT)
   target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/peer_work.c)
   if(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)

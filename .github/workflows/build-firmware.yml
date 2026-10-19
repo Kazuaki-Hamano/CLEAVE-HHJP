@@ -8,9 +8,11 @@ on:
       - feature/deep-sleep-trial
       - feature/dya-activity-settings
       - feature/dya-trackpad-settings
+      - feature/dya-split-status
     paths:
       - 'config/**'
       - 'src/**'
+      - 'modules/**'
       - 'dts/**'
       - 'zephyr/**'
       - 'Kconfig'
@@ -22,6 +24,7 @@ on:
     paths:
       - 'config/**'
       - 'src/**'
+      - 'modules/**'
       - 'dts/**'
       - 'zephyr/**'
       - 'Kconfig'
