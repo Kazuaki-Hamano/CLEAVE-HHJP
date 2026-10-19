@@ -24,7 +24,7 @@ No input/activity-marking events or polling of the right are added. The worker d
 
 `test_activity_rpc_wire.py --deps output/dya-research/nanopb-test-deps` also generates the unchanged settings proto with nanopb 0.4.9.1 and round-trips production Get/Set responses. It checks nested-message presence, rejection of missing settings, the actual queue call and failure response. Install test dependencies as described in dya-split-status.md.
 
-Build, artifact and hardware acceptance pending. Main is unchanged.
+Source `e02374dd`, firmware ID `59e141ab`, Actions run `39304869644`, artifacts `output/firmware/e02374dd/`. All three UF2s were generated and checked for integrity. Both merged configs and image keys confirm the new stores, central-only outbox, existing split roles/stacks, DYA activity/trackpad support, 30-minute sleep defaults, retained HID and keymap. The production-code queue and real nanopb RPC tests passed. Per-job log archive and SHA-256 manifest accompany the UF2s. Hardware acceptance remains pending; main is unchanged.
 
 ## Hardware acceptance
 

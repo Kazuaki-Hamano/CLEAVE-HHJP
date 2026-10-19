@@ -96,6 +96,10 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
             else:
                 assert b"cleave_right_trackpad\x00" not in payload, "Tuning must live on central only"
             print(side, "role-specific DYA trackpad settings and retired legacy transport: PASS")
+        if "--settings-sync" in sys.argv:
+            assert b"activity/s\0" in payload, (side, "Activity persistence key missing")
+            assert (b"cleave_sync/activity\0" in payload) == (side == "left"), (side, "Outbox must be central-only")
+            print(side, "activity persistence/outbox image keys: PASS")
         marker = re.search(rb"CLEAVE_HHJP_UPDATE1\|" + side.upper().encode() + rb"\|([0-9a-f]{8})", payload)
         assert marker, (side, "update identity missing")
         identities[side] = marker[1].decode()
