@@ -26,14 +26,14 @@
 			, <&key_physical_attrs 100 100 400   0 0 0 0>  // 4
 			, <&key_physical_attrs 100 100 500   0 0 0 0>  // 5
 			, <&key_physical_attrs 100 100 600   0 0 0 0>  // 6
-			, <&key_physical_attrs 100 100 800   0 0 0 0>  // 7 (gap 2U = 200)
-			, <&key_physical_attrs 100 100 900   0 0 0 0>  // 8
-			, <&key_physical_attrs 100 100 1000  0 0 0 0>  // 9
-			, <&key_physical_attrs 100 100 1100  0 0 0 0>  // 0
-			, <&key_physical_attrs 100 100 1200  0 0 0 0>  // -
-			, <&key_physical_attrs 100 100 1300  0 0 0 0>  // ^
-			, <&key_physical_attrs 100 100 1400  0 0 0 0>  // ¥
-			, <&key_physical_attrs 100 100 1500  0 0 0 0>  // BS
+			, <&key_physical_attrs 100 100 850 0 0 0 0>  // 7 (0.5U right of the Y row)
+			, <&key_physical_attrs 100 100 950 0 0 0 0>  // 8
+			, <&key_physical_attrs 100 100 1050 0 0 0 0>  // 9
+			, <&key_physical_attrs 100 100 1150 0 0 0 0>  // 0
+			, <&key_physical_attrs 100 100 1250 0 0 0 0>  // -
+			, <&key_physical_attrs 100 100 1350 0 0 0 0>  // ^
+			, <&key_physical_attrs 100 100 1450 0 0 0 0>  // ¥
+			, <&key_physical_attrs 100 100 1550 0 0 0 0>  // BS
 			// Row 1: Tab(1.5U) + 5 keys (left) + gap 2U + 7 keys + Enter(1.25U×2h) (right)
 			, <&key_physical_attrs 150 100   0 100 0 0 0>  // Tab (1.5U = 150)
 			, <&key_physical_attrs 100 100 150 100 0 0 0>  // Q
@@ -48,7 +48,7 @@
 			, <&key_physical_attrs 100 100 1200 100 0 0 0> // P
 			, <&key_physical_attrs 100 100 1300 100 0 0 0> // @
 			, <&key_physical_attrs 100 100 1400 100 0 0 0> // [
-			, <&key_physical_attrs 125 200 1500 100 0 0 0> // Enter (1.25U×2h)
+			, <&key_physical_attrs 125 200 1525 100 0 0 0> // Enter (1.25U×2h)
 			// Row 2: Ctrl(1.75U) + 5 keys (left) + gap 2U + 7 keys (right)
 			, <&key_physical_attrs 175 100   0 200 0 0 0>  // Ctrl (1.75U = 175)
 			, <&key_physical_attrs 100 100 175 200 0 0 0>  // A
@@ -56,13 +56,13 @@
 			, <&key_physical_attrs 100 100 375 200 0 0 0>  // D
 			, <&key_physical_attrs 100 100 475 200 0 0 0>  // F
 			, <&key_physical_attrs 100 100 575 200 0 0 0>  // G
-			, <&key_physical_attrs 100 100 800 200 0 0 0>  // H (gap 2U)
-			, <&key_physical_attrs 100 100 900 200 0 0 0>  // J
-			, <&key_physical_attrs 100 100 1000 200 0 0 0> // K
-			, <&key_physical_attrs 100 100 1100 200 0 0 0> // L
-			, <&key_physical_attrs 100 100 1200 200 0 0 0> // ;
-			, <&key_physical_attrs 100 100 1300 200 0 0 0> // :
-			, <&key_physical_attrs 100 100 1400 200 0 0 0> // ]
+			, <&key_physical_attrs 100 100 825 200 0 0 0>  // H (0.25U right of the Y row)
+			, <&key_physical_attrs 100 100 925 200 0 0 0>  // J
+			, <&key_physical_attrs 100 100 1025 200 0 0 0> // K
+			, <&key_physical_attrs 100 100 1125 200 0 0 0> // L
+			, <&key_physical_attrs 100 100 1225 200 0 0 0> // ;
+			, <&key_physical_attrs 100 100 1325 200 0 0 0> // :
+			, <&key_physical_attrs 100 100 1425 200 0 0 0> // ]
 			// Row 3: LShift(2U) + 5 keys (left) + gap 2U + 6 keys + Up + RShift (right)
 			, <&key_physical_attrs 200 100   0 300 0 0 0>  // LShift (2U = 200)
 			, <&key_physical_attrs 100 100 200 300 0 0 0>  // Z
@@ -70,14 +70,14 @@
 			, <&key_physical_attrs 100 100 400 300 0 0 0>  // C
 			, <&key_physical_attrs 100 100 500 300 0 0 0>  // V
 			, <&key_physical_attrs 100 100 600 300 0 0 0>  // B
-			, <&key_physical_attrs 100 100 800 300 0 0 0>  // N (gap 2U)
-			, <&key_physical_attrs 100 100 900 300 0 0 0>  // M
-			, <&key_physical_attrs 100 100 1000 300 0 0 0> // <
-			, <&key_physical_attrs 100 100 1100 300 0 0 0> // >
-			, <&key_physical_attrs 100 100 1200 300 0 0 0> // /
-			, <&key_physical_attrs 100 100 1300 300 0 0 0> // _
-			, <&key_physical_attrs 100 100 1400 300 0 0 0> // Up
-			, <&key_physical_attrs 100 100 1500 300 0 0 0> // RShift
+			, <&key_physical_attrs 100 100 850 300 0 0 0>  // N (0.5U right of the Y row)
+			, <&key_physical_attrs 100 100 950 300 0 0 0>  // M
+			, <&key_physical_attrs 100 100 1050 300 0 0 0> // <
+			, <&key_physical_attrs 100 100 1150 300 0 0 0> // >
+			, <&key_physical_attrs 100 100 1250 300 0 0 0> // /
+			, <&key_physical_attrs 100 100 1350 300 0 0 0> // _
+			, <&key_physical_attrs 100 100 1450 300 0 0 0> // Up
+			, <&key_physical_attrs 100 100 1550 300 0 0 0> // RShift
 			// Row 4: Fn + gap 0.25U + 4 keys + Space(1.25U) (left) + gap 2U + Space(1.25U) + 3 keys + gap 0.25U + 3 arrows (right)
 			, <&key_physical_attrs 100 100   0 400 0 0 0>  // Fn
 			, <&key_physical_attrs 100 100 125 400 0 0 0>  // Win (gap 0.25U = 25)
