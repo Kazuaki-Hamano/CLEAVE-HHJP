@@ -41,3 +41,11 @@ The old storage/polling tests are retired with that code. Processor tests retain
 5. Confirm one idle/deep-sleep/own-side-key-wake cycle: the removed sensitivity polling must not prevent sleep. Check DYA Connection and the Windows battery/updater information still load; no actual boot command is needed.
 
 Source commit `c876370e`; both UF2s report firmware ID `63390cea`. Artifacts: `output/firmware/c876370e/`, Actions run `39286178153`. UF2 integrity, actual merged Kconfig/Devicetree, central-only registry keys, retired Report 7, retained HID reports, split worker stacks, 30-minute deep sleep and keymap checks passed. Host tests passed for the production adapter event/cache behavior and independent pointer/scroll processing. `build-logs.zip` archives complete per-job logs with provenance. Real-device DYA visibility/edit/save and motion verification remain pending. Main is unchanged.
+
+## Save-error correction
+
+The first trial registered `right_acceleration_percent` and `right_native_scroll_percent` under `cleave_right_trackpad`. With the `custom_settings/` storage prefix, their storage paths required 65 and 66 bytes including NUL, exceeding the pinned Zephyr `SETTINGS_MAX_NAME_LEN` of 64. The registry permits RAM writes but returns `-ENAMETOOLONG` during persistence, reported by DYA as "Failed to process request". Partial saves are possible: the other two right keys fit and may already be saved.
+
+The correction renames only those two keys to `acceleration_percent` and `native_scroll_percent`. Their prior names could not persist; re-enter their values after flashing. Existing `right_speed_percent`, `right_max_gain_percent` and left settings retain their names. All five storage paths now fit (55-61 bytes including NUL). A production `BUILD_ASSERT` checks every declaration against Zephyr's real limit, and a host regression reproduces the old truncation and proves the guard rejects it. Processing, defaults and ranges are unchanged.
+
+Save-error fix firmware: build pending; hardware persistence confirmation pending.

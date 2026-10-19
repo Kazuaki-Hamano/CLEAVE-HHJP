@@ -29,6 +29,6 @@ subprocess.run(["wsl", "--", "bash", "-lc", "gcc -std=c11 -x c -o /tmp/cleave-st
 # Prove the production build guard rejects the former invalid name.
 runner = Path("tools/trackpad-tests/test_registry.py").read_text()
 runner = runner.replace('source = re.sub(', 'source = source.replace(\'"acceleration_percent"\', \'"right_acceleration_percent"\')\nsource = re.sub(')
-result = subprocess.run(["python", "-c", runner], capture_output=True, text=True)
+result = subprocess.run(["python", "-c", runner], capture_output=True, text=True, encoding="utf-8", errors="replace")
 assert result.returncode != 0 and "Trackpad setting storage name exceeds" in result.stderr, result.stderr
 print("Production BUILD_ASSERT rejects oversized name: PASS")
