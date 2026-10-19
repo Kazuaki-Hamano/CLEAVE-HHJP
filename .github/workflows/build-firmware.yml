@@ -3,16 +3,29 @@ on:
   push:
     branches:
       - main
+      - feature/dya-studio
     paths:
       - 'config/**'
+      - 'src/**'
+      - 'dts/**'
+      - 'zephyr/**'
+      - 'Kconfig'
+      - 'tools/battery/**'
+      - 'CMakeLists.txt'
       - 'build.yaml'
       - '.github/workflows/build-firmware.yml'
   pull_request:
     paths:
       - 'config/**'
+      - 'src/**'
+      - 'dts/**'
+      - 'zephyr/**'
+      - 'Kconfig'
+      - 'tools/battery/**'
+      - 'CMakeLists.txt'
       - 'build.yaml'
       - '.github/workflows/build-firmware.yml'
 
 jobs:
   build:
-    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3-branch
+    uses: cormoran/zmk/.github/workflows/build-user-config.yml@e5c9b6915b56801193e359dd9bad4a167ce0d1b8

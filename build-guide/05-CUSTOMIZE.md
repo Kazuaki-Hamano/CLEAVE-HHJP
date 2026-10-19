@@ -4,6 +4,16 @@
 
 この章ではCLEAVE HHJPのキーマップやファームウェア設定を変更する方法をまとめます。
 
+## このフォークの追加カスタマイズ
+
+| 変更内容 | ガイド |
+|---|---|
+| TM040040タッチパッドの後付け | [取り付けガイド](06-TRACKPAD.md)。部材・左右の配線・書き込み・動作確認 |
+| 左右パッドの操作とLANG2・旧LANG1長押しFn | [完成後の使い方](04-USAGE.md#タッチパッド) |
+| カーソル速度・加速・スクロール量の調整 | [Windowsアプリのタッチパッド設定](../tools/battery/trackpad-settings.md) |
+
+タッチパッドの追加は任意です。元のキーボードの組み立て手順に加えて、取り付ける場合だけ対応するガイドを参照してください。
+
 > [!NOTE]
 > 初期キーマップのまま使う場合、このガイドの作業は必須ではありません。
 > キー配置やファームウェア設定を確認したくなったときに参照してください。
@@ -93,7 +103,7 @@ GitHub上で直接ファイルを編集する場合は、Gitのコマンド操�
 | 目的 | ファイル |
 |---|---|
 | キー割り当てを変更する | [`cleave_hhjp.keymap`](../config/cleave_hhjp.keymap) |
-| スリープ時間やBluetooth関連の設定を変更する | [`cleave_hhjp.conf`](../config/boards/shields/cleave_hhjp/cleave_hhjp.conf) |
+| スリープ時間やBluetooth関連の設定を変更する | 実際に読み込まれる側の `.conf`（[設計書](../docs/firmware_design.md#3-設定の読み込み)を参照） |
 | 左右の配線やキーマトリックスを変更する | [`cleave_hhjp_left.overlay`](../config/boards/shields/cleave_hhjp/cleave_hhjp_left.overlay) / [`cleave_hhjp_right.overlay`](../config/boards/shields/cleave_hhjp/cleave_hhjp_right.overlay) |
 
 通常のキーマップ変更では、`.overlay`、`build.yaml`、`west.yml`は変更しません。
@@ -123,7 +133,7 @@ GitHub上で直接ファイルを編集する場合は、Gitのコマンド操�
 
 ### ビルドしてUF2をダウンロードする
 
-1. GitHubで[CLEAVE-HHJPリポジトリ](https://github.com/Rimebeck/Cleave-HHJP)を開き、`Fork`から自分のアカウントへフォークします。
+1. GitHubで[このフォークのリポジトリ](https://github.com/Kazuaki-Hamano/CLEAVE-HHJP)を開き、`Fork`から自分のアカウントへフォークします。標準配布版を元にする場合は[上流リポジトリ](https://github.com/Rimebeck/Cleave-HHJP)を使用しますが、このフォークの追加機能を含むとは限りません。
 2. フォークしたリポジトリでActionsが無効になっている場合は、`Actions`タブからワークフローを有効化します。
 3. GitHub上で直接編集する場合は、対象ファイルを開いて鉛筆アイコンから編集します。ローカルで編集する場合は、フォークしたリポジトリをcloneして`cleave_hhjp.keymap`などの設定ファイルを編集します。
 4. GitHub上で直接編集した場合は`Commit changes`で保存します。ローカルで編集した場合はcommitしてフォークしたリポジトリへpushします。
@@ -131,6 +141,8 @@ GitHub上で直接ファイルを編集する場合は、Gitのコマンド操�
 6. ビルドが成功したら、`Artifacts`から`firmware`をダウンロードします。
 7. ダウンロードしたファイルを展開します。
 8. [ファームウェアのダウンロード・書き込み・接続確認](02-FIRMWARE.md)と同じ手順で、生成されたUF2ファイルを左右それぞれのXIAO nRF52840 Plusへ書き込みます。
+
+現在のワークフローは対象パスの変更を伴う`main`へのpushまたはPull Requestで起動します。`main`以外のブランチにpushしただけでは起動しないため、PRを作成してください。対象パスと追加モジュールの構成は[設計書](../docs/firmware_design.md#9-github-actionsと配布)を参照してください。
 
 > [!NOTE]
 > GitHub Actionsの画面やartifactのダウンロード方法は、ZMK公式の[Installing ZMK](https://zmk.dev/docs/user-setup)にも説明があります。
@@ -141,15 +153,15 @@ GitHub上で直接ファイルを編集する場合は、Gitのコマンド操�
 |---|---|---|---|
 | キーを入れ替えたい | [`cleave_hhjp.keymap`](../config/cleave_hhjp.keymap) | はじめて向け | まずはこのファイルだけを変更します。 |
 | Fnレイヤーの割り当てを変えたい | [`cleave_hhjp.keymap`](../config/cleave_hhjp.keymap) | はじめて向け | `fn_layer`内の割り当てを変更します。 |
-| スリープ時間などを変えたい | [`cleave_hhjp.conf`](../config/boards/shields/cleave_hhjp/cleave_hhjp.conf) | 中級 | 数値や設定名の意味を確認してから変更します。 |
-| 左右別の設定を変えたい | [`cleave_hhjp_left.conf`](../config/boards/shields/cleave_hhjp/cleave_hhjp_left.conf) / [`cleave_hhjp_right.conf`](../config/boards/shields/cleave_hhjp/cleave_hhjp_right.conf) | 中級 | 変更したい側のファイルだけを編集します。 |
+| スリープ時間などを変えたい | 読み込まれる側の `.conf` | 中級 | 共通名ファイルの編集だけでは反映されません。ActionsのマージログとKconfigを確認します。 |
+| 左右別の設定を変えたい | [`cleave_hhjp_left.conf`](../config/boards/shields/cleave_hhjp/cleave_hhjp_left.conf) | 中級 | 右側専用 `.conf` は現状ありません。必要なら追加し、読み込みを確認します。 |
 | 配線やマトリックスを変えたい | [`cleave_hhjp_left.overlay`](../config/boards/shields/cleave_hhjp/cleave_hhjp_left.overlay) / [`cleave_hhjp_right.overlay`](../config/boards/shields/cleave_hhjp/cleave_hhjp_right.overlay) | 上級 | 通常のカスタマイズでは触りません。 |
 | ビルド対象を変えたい | [`build.yaml`](../build.yaml) | 上級 | 生成するUF2の種類を変える場合に編集します。 |
 | ZMKや関連モジュールの依存を変えたい | [`west.yml`](../config/west.yml) | 上級 | 通常のキーマップ変更では触りません。 |
 
 ### キーマップ変更の考え方
 
-キーマップは`cleave_hhjp.keymap`の`keymap`ノード内で定義されています。CLEAVE HHJPでは標準の`default_layer`と、`Fn`キーで使う`fn_layer`が定義されています。
+キーマップは`config/cleave_hhjp.keymap`の`keymap`ノード内で定義されています。このフォークには`default_layer`と`fn_layer`の2レイヤーがあります。LANG2・右Space直後の旧LANG1位置の200ms長押し、または専用FnキーでFnを使います。旧マウスレイヤーは削除済みです。右Space直後の短押しはINT4、隣のKanaはLANG1を送ります。詳細は[基本操作](04-USAGE.md#基本操作)と[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。
 
 主な記法は以下の通りです。
 

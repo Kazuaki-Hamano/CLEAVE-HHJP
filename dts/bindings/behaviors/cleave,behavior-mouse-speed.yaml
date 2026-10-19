@@ -1,3 +1,0 @@
-description: Select mouse speed or hold a temporary speed modifier
-compatible: "cleave,behavior-mouse-speed"
-include: one_param.yaml

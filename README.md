@@ -16,6 +16,18 @@
 
 - [ビルドガイド](build-guide/README.md)
   組み立て、ファームウェア書き込み、ケース作成、完成後の使い方、カスタマイズ方法をまとめています。
+- [現在のファームウェア設計](docs/firmware_design.md)
+  このフォークのキーマップ、実効設定の確認方法、USB残量・充電状態・更新機能をまとめています。
+- [Windowsバッテリーアプリと更新手順](tools/battery/README.md)
+- [キー操作によるUF2モード移行](docs/bootloader-keys.md)
+- [タッチパッド設定](tools/battery/trackpad-settings.md)
+- [TM040040タッチパッド取り付けガイド](build-guide/06-TRACKPAD.md)
+- [生成物の保存場所](docs/generated-output.md)
+- [ケース設計ツール](tools/case-design/README.md)
+
+このフォークでは左右のタッチパッド（左は縦横スクロール・Fn中の戻る／進む、右はFn中もカーソル移動）、LANG2・旧LANG1位置の長押しFn、アプリでの速度・加速・スクロール量設定、左右のバッテリー・充電状態表示、アプリ更新用プロトコルを追加しています。旧マウスレイヤーは削除済みです。
+以下の標準配布元のReleaseが、このフォークの追加機能を含むとは限りません。
+追加機能を使う場合は、このリポジトリのActionsで生成した左右用UF2を使用してください。
 
 ## 関連リンク
 

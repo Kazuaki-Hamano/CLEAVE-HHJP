@@ -17,6 +17,20 @@ config BT_MAX_CONN
 
 endif
 
+if SHIELD_CLEAVE_HHJP_RIGHT
+
+# The physical trackpad is on the peripheral; input-split forwards it to the left.
+config ZMK_POINTING
+	default y
+
+config SPI
+	default y
+
+config BT_GATT_CLIENT
+	default y
+
+endif
+
 if SHIELD_CLEAVE_HHJP_LEFT || SHIELD_CLEAVE_HHJP_RIGHT
 
 config ZMK_SPLIT

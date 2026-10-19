@@ -1,16 +1,40 @@
 manifest:
   remotes:
-    - name: zmkfirmware
-      url-base: https://github.com/zmkfirmware
+    - name: cormoran
+      url-base: https://github.com/cormoran
     - name: caksoylar
       url-base: https://github.com/caksoylar
   projects:
     - name: zmk
-      remote: zmkfirmware
-      revision: v0.3-branch
+      remote: cormoran
+      revision: e5c9b6915b56801193e359dd9bad4a167ce0d1b8 # main+dya
       import: app/west.yml
+    - name: zephyr
+      remote: cormoran
+      revision: 63363d92c475ad203b35e9047cef7ecd8706a6fc # v4.1.0+zmk-fixes+nrf-half-duplex-uart
+      clone-depth: 1
+      import:
+        name-blocklist: [ci-tools, hal_altera, hal_cypress, hal_infineon, hal_microchip, hal_nxp, hal_openisa, hal_xtensa, hal_st, hal_ti, loramac-node, mcuboot, mcumgr, net-tools, openthread, edtt, trusted-firmware-m]
+    - name: zmk-feature-custom-settings
+      remote: cormoran
+      revision: c6a7fef3a3be3d3ace5de9a4b0628c6418cd1f3f # main
+    - name: zmk-feature-fast-keymap
+      remote: cormoran
+      revision: 21d9af3c2ad694f823ad007b361b091c1e366eee # main
+    - name: zmk-feature-runtime-macro
+      remote: cormoran
+      revision: 38530962eb7061b60efcb98e84585cfb1f0cb6de # main
+    - name: zmk-feature-runtime-combo
+      remote: cormoran
+      revision: d9490e7b5d41c516221d131241009e81740efcee # main
+    - name: zmk-feature-input-stream
+      remote: cormoran
+      revision: aeb015908a42a7615ccdccc7feb3a10d23132a71 # main
+    - name: zmk-feature-module-physical-layout
+      remote: cormoran
+      revision: 4f18de45dc27820725d267916b4cdacc0e0b6cf9 # main
     - name: zmk-rgbled-widget
       remote: caksoylar
-      revision: v0.3
+      revision: e6b467792a1dabef8cfa5c9fd26bfefc9c16662b # Zephyr 4.1 / current endpoint API
   self:
     path: config
