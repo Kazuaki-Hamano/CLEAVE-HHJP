@@ -76,3 +76,11 @@ all passed. Left GNU build-id: `b5635776198700b41359d18486812286f504eb70`.
 Production apply/validation/active-layer-count unit checks passed.
 Actual DYA display, per-endpoint/OS switching, persisted mappings and Fn priority
 still require the user's hardware check. Main does not include this trial.
+
+## Hardware acceptance
+
+The user reported on 2026-10-20 that the trial operates without problems.
+This accepts the host-layer feature for main integration. The report is overall
+acceptance; individual OS detection results and every mapping combination were
+not enumerated. Source remains `ea0c00bf`, firmware identity `3d6b3335`.
+No additional flash or settings reset is required for the merge.
