@@ -49,6 +49,19 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
         if "--stack-trial" in sys.argv:
             assert stack == 2048, (side, stack_setting, stack)
         print(side, "split worker stack:", stack)
+        if "--ble-discovery" in sys.argv:
+            for setting in ("CONFIG_ZMK_STUDIO_TRANSPORT_BLE=y", "CONFIG_ZMK_STUDIO_TRANSPORT_UART=y"):
+                assert bool(re.search(r"(?m) " + re.escape(setting) + r"$", config)) == (side == "left"), (side, setting)
+            assert not re.search(r"(?m) CONFIG_ZMK_STUDIO_LOCK_BLE_DIRECT_ADVERTISING_ON_UNLOCK=y$", config), (side, "unbounded unlock advertising")
+            if side == "left":
+                assert "studio_ble_discovery.c" in config and "gatt_rpc_transport.c" in config
+                dts_entry = next(n for n in logs.namelist() if side in n and "Devicetree file" in n)
+                dts = "\n".join(line.split("Z ", 1)[-1] for line in logs.read(dts_entry).decode().splitlines())
+                node = re.search(r"fn_layer\s*\{.*?bindings\s*=\s*<(.*?)>;", dts, re.S)
+                bindings = [" ".join(x.split()) for x in re.findall(r"&[^&]+", node[1])]
+                assert len(bindings) == 70 and bindings[22] == "&studio_ble", bindings[22]
+                assert 'display-name = "Studio BLE Discovery";' in dts
+            print(side, "USB/BLE transport and manual discovery config: PASS")
         if "--host-layers" in sys.argv:
             host_features = ("CONFIG_ZMK_OS_DETECTION=y", "CONFIG_ZMK_OS_DETECTION_STUDIO_RPC=y", "CONFIG_ZMK_OS_DETECTION_USB=y", "CONFIG_ZMK_OS_DETECTION_BLE=y", "CONFIG_ZMK_DEFAULT_LAYER=y", "CONFIG_ZMK_DEFAULT_LAYER_STUDIO_RPC=y", "CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION=y")
             for setting in host_features:
