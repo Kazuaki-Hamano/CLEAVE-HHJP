@@ -11,6 +11,7 @@ on:
       - feature/dya-split-status
       - feature/dya-settings-sync
       - feature/dya-diagnostics
+      - feature/dya-stability-diagnostics
     paths:
       - 'config/**'
       - 'src/**'
