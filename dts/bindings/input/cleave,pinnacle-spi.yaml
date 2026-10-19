@@ -1,6 +1,6 @@
 description: |
   Sensor driver for the Cirque Pinnacle trackpad ASICs, using the SPI interface
 
-compatible: "cirque,pinnacle"
+compatible: "cleave,pinnacle"
 
-include: ["spi-device.yaml", "cirque,pinnacle-common.yaml"]
+include: ["spi-device.yaml", "cleave,pinnacle-common.yaml"]
