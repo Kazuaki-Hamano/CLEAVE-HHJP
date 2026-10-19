@@ -81,7 +81,12 @@ static void handle_get_state(cormoran_default_layer_StateResponse *out) {
     out->active_endpoint_index = zmk_endpoint_instance_to_index(endpoint);
     out->current_os = current_os();
     out->resolved_layer = zmk_default_layer_resolve_current();
-    out->layer_count = ZMK_KEYMAP_LAYERS_LEN;
+    /* Report active layers, excluding reserved disabled capacity slots. */
+    out->layer_count = 0;
+    while (out->layer_count < ZMK_KEYMAP_LAYERS_LEN &&
+           zmk_keymap_layer_index_to_id(out->layer_count) != ZMK_KEYMAP_LAYER_ID_INVAL) {
+        out->layer_count++;
+    }
     out->os_detection_available = IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION);
 }
 
