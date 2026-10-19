@@ -49,3 +49,7 @@ Following successful wake testing, both compiled sleep timeouts are changed from
 Recheck the normal-use build with `python tools/dya-studio/verify_build.py output/firmware/687bbed3 --stack-trial --connection --deep-sleep --sleep-timeout-ms=1800000` plus the existing UF2/keymap verification scripts.
 
 Main remains unchanged; normal-duration use and battery savings remain to be evaluated. The 30-minute build is ready for the user to flash on both halves without a settings reset.
+
+## Integration acceptance
+
+The subsequent DYA activity-settings trial includes this deep-sleep implementation. After key-wake acceptance on both halves, the user also accepted DYA setting changes and persistence. See [dya-activity-settings.md](dya-activity-settings.md) for final verification and integration evidence. Sleep defaults to 30 minutes unless overridden by saved DYA settings; battery savings remain unmeasured.

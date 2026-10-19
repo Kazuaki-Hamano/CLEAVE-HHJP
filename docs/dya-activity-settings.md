@@ -25,3 +25,11 @@ Trial source `31d417b0`, matching left/right identity `13dc8a55`. Three UF2s wer
 Right complete job logs confirm `CONFIG_ZMK_SETTINGS_RPC=y` and `CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE=60000`. Left merged-configuration logs and run-level exports remained unavailable (404), with metadata stuck queued despite generated artifacts; the full merged-config verification is not claimed complete. `build-logs.zip` contains only the right log and a provenance note. `activity-binary-verification.json` explicitly records the remaining left-log check.
 
 Verified copies of the artifacts and checksums are at `V:/Projects/CLEAVE-HHJP/output/firmware/31d417b0/`. No firmware or settings reset was written by the assistant. Real-device DYA reads/writes, split reflection, persistence, and selected-duration sleep/wake remain for hardware acceptance. Main remains unchanged.
+
+## Acceptance and final artifact checks
+
+The user reported no apparent problems after the requested DYA setting/readback/persistence checks. Together with the earlier successful key-wake test on both halves, this accepts the activity-settings/deep-sleep baseline for main integration. Battery-life improvement and delivery to an offline/sleeping right half are not claimed verified.
+
+The left complete job log became available on recheck. Actual merged configuration for both halves now passed the full verification command with `--activity-settings --deep-sleep --sleep-timeout-ms=1800000 --stack-trial --connection`. Existing UF2/HID and keymap verification also passed. The original run metadata remains queued; validation relies on the published artifacts, unmodified complete left/right job logs, and the user hardware report rather than an aggregate CI-success claim. The archive and verification reports in the canonical artifact directory were refreshed.
+
+Integration includes the deep-sleep implementation, battery-mode status-poll suppression, 30-minute compiled default and Settings RPC. Firmware sources remain identical to tested source `31d417b0` / identity `13dc8a55`. Saved DYA timeouts override compiled defaults. The existing 60-second save debounce and awake-peripheral requirement remain as documented above.
