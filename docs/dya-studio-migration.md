@@ -14,7 +14,7 @@ Use the DYA custom RPC baseline plus keymap, macro, combo, pressed-key stream, a
 
 ZMK, Zephyr, and DYA feature modules are pinned to exact commits in `config/west.yml`. The CI reusable workflow uses the same ZMK commit. The XIAO target changes from `seeeduino_xiao_ble` to `xiao_ble//zmk` for Zephyr 4.1.
 
-The left central uses its side-specific `.conf`, so DYA split baseline settings are repeated there and in the common `.conf` used by the right. The existing settings save debounce remains unchanged at this stage. Existing Cirque processing and the custom battery/trackpad HID interface remain the implementation for those functions; PMW3610 sample wiring and drivers are not imported.
+Both sides use explicit side-specific `.conf` files. Artifact inspection showed that the common `.conf` was not loaded for the right either, so the peripheral baseline is placed in `cleave_hhjp_right.conf`. No idle/sleep or save-debounce override is introduced; inspect the merged Kconfig rather than assuming the common file is active. Existing Cirque processing and the custom battery/trackpad HID interface remain the implementation for those functions; PMW3610 sample wiring and drivers are not imported.
 
 DYA connection/OS controls, generic settings, diagnostics, and a Cirque settings adapter are deferred until the baseline passes actual device testing.
 
