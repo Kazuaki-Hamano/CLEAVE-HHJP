@@ -13,8 +13,12 @@ if ($listener) {
 }
 $pythonPath = (Get-Command python -ErrorAction Stop).Source
 $logRoot = Split-Path -Parent $resolvedWeb
+$serverScript = Join-Path $PSScriptRoot 'serve_ble_web.py'
+if (-not (Test-Path -LiteralPath $serverScript)) {
+    throw "DYA server script not found: $serverScript"
+}
 $process = Start-Process -WindowStyle Hidden -PassThru -FilePath $pythonPath `
-    -ArgumentList @('-m', 'http.server', "$Port", '--bind', '127.0.0.1', '--directory', ('"' + $resolvedWeb + '"')) `
+    -ArgumentList @(('"' + $serverScript + '"'), '--port', "$Port", '--directory', ('"' + $resolvedWeb + '"')) `
     -RedirectStandardOutput (Join-Path $logRoot 'server.stdout.log') `
     -RedirectStandardError (Join-Path $logRoot 'server.stderr.log')
 $process.Id | Set-Content -LiteralPath (Join-Path $logRoot 'server.pid')

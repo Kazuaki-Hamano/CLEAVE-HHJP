@@ -72,3 +72,23 @@ for the RAM write to finish, save its section and confirm the unsaved state
 clears. Reconnect/read back; a later keyboard reboot/readback checks persistence.
 The public site's prior error should not be treated as successful saving.
 USB saving remains a workaround on the public site.
+
+## Local startup correction
+
+The user found a black screen after the first local delivery. The original
+HTTP-200/asset checks did not establish browser startup. On this Windows system,
+Python's generic server used the registry MIME mapping and returned the module
+bundle as `text/plain`. Chrome displayed an empty root rather than running it.
+
+`serve_ble_web.py` now explicitly serves `.js`/`.mjs` as `text/javascript`,
+independently of registry mappings. Responses use `no-store`; conditional cache
+headers are ignored so a prior cached wrong MIME response cannot produce a 304.
+The launcher uses this server and still binds only to loopback. The old known
+trial process was identified by PID/command line before replacing it.
+
+The user-owned Chrome tab was reloaded and the Japanese DYA splash visibly
+showed USB, BLE and Demo controls. No errors were captured by the browser log
+API. Actual module Content-Type and a conditional request returning fresh HTTP
+200 were checked. Screenshot: `output/dya-studio-ble-fix/startup-confirmed.png`.
+Temporary startup error diagnostics were removed. BLE hardware saving remains
+pending; this corrects the local delivery, not the public DYA website.
