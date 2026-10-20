@@ -1,6 +1,6 @@
 # CLEAVE USB battery display
 
-Trackpad tuning is available from the tray's **タッチパッド設定** menu. See [the settings guide](trackpad-settings.md) for speed, acceleration, maximum multiplier, Fn scroll amount, and saving. Sensitivity is fixed at 1x. Speed and maximum multiplier use 0.1x steps. The current EXE is standardized at `output/battery/dist/CLEAVE-Battery.exe`; exit an older instance before starting it. Both halves need the native split tuning support; upgrading from `5fedfa36` to the current controls only requires updating the left half.
+Trackpad tuning now uses DYA Studio; the old Windows Feature 7 settings are retired. See [the settings guide](trackpad-settings.md). Keep using `output/battery/dist/CLEAVE-Battery.exe` for battery status, diagnostics and firmware-update support; exit an older instance before starting it.
 
 ## Windows EXE / notification area
 

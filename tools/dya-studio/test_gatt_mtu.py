@@ -69,7 +69,7 @@ int main(void) {
 """
 
 for patched, path in [
-    (False, Path("output/dya-research/ble-studio/src/studio/gatt_rpc_transport.c")),
+    (False, Path("tools/dya-studio/fixtures/gatt_rpc_transport.upstream.c")),
     (True, Path("src/studio/gatt_rpc_transport.c")),
 ]:
     source = path.read_text(encoding="utf-8")
