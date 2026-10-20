@@ -1,0 +1,60 @@
+diff --git a/src/index.ts b/src/index.ts
+index 34eca58..4809b36 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -108,13 +108,21 @@ export async function call_rpc(
+     let request: Request = { ...req, requestId: conn.current_request++ };
+ 
+     let writer = conn.request_writable.getWriter();
+-    await writer.write(request);
+-    writer.releaseLock();
++    try {
++      await writer.write(request);
++    } finally {
++      writer.releaseLock();
++    }
+ 
+     let reader = conn.request_response_readable.getReader();
+ 
+-    let { done, value } = await reader.read();
+-    reader.releaseLock();
++    let result: ReadableStreamReadResult<RequestResponse>;
++    try {
++      result = await reader.read();
++    } finally {
++      reader.releaseLock();
++    }
++    let { done, value } = result;
+ 
+     if (done || !value) {
+       throw 'No response';
+diff --git a/src/transport/gatt.ts b/src/transport/gatt.ts
+index 189f486..cb56864 100644
+--- a/src/transport/gatt.ts
++++ b/src/transport/gatt.ts
+@@ -97,16 +97,17 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
+   let writable = new WritableStream({
+     async write(chunk) {
+         await onStart.promise;
+-        // Further investigation required for best approach
+-        // writeValueWithoutResponse might work by chunking into MTU sizes for bluefy
+-        if (!isBluefy && char.properties.writeWithoutResponse) {
+-            return await char.writeValueWithoutResponse(chunk);
+-        }
++        // Web Bluetooth does not expose the negotiated ATT MTU. Use the
++        // minimum ATT payload for both write modes, including Windows' fast
++        // write-without-response path, and preserve chunk order with await.
+         const mtu = 20;
+         for (let i = 0; i < chunk.length; i += mtu) {
+-            let end = Math.min(i + mtu, chunk.length);
+-            let slice = chunk.slice(i, end);
+-            await char.writeValue(slice);
++            const slice = chunk.slice(i, Math.min(i + mtu, chunk.length));
++            if (!isBluefy && char.properties.writeWithoutResponse) {
++                await char.writeValueWithoutResponse(slice);
++            } else {
++                await char.writeValue(slice);
++            }
+         }
+         return;
+     },
