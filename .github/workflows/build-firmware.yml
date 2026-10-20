@@ -15,6 +15,7 @@ on:
       - feature/dya-host-layers
       - feature/dya-layout-stagger
       - feature/dya-ble-discovery
+      - fix/dya-ble-transport
     paths:
       - 'config/**'
       - 'src/**'
