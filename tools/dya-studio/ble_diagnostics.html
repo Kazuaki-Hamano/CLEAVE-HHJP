@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLEAVE BLE diagnostics</title>
+<style>body{font:16px system-ui;max-width:850px;margin:40px auto;padding:0 20px;color:#173047}button{padding:12px;margin:6px 12px 10px 0}pre{white-space:pre-wrap;background:#edf2f5;padding:20px;line-height:1.6}p{line-height:1.7}</style>
+<h1>CLEAVE BLE service diagnostics</h1>
+<p>Close DYA tabs. Keep the keyboard in the failed reconnect state; do not power-cycle it. This page reads the Battery and Studio services without writing settings.</p>
+<button id="run">Start diagnostics</button><button id="release">Release browser connection</button>
+<p>Share the log below. After a timeout, reload this page before another attempt.</p>
+<pre id="log">Ready</pre>
+<script type="module">
+const studio = '00000000-0196-6107-c967-c5cfb1c2482a';
+const output = document.querySelector('#log');
+let device;
+const log = text => { output.textContent += '\n' + new Date().toLocaleTimeString() + ' ' + text; };
+async function step(label, operation) {
+  log(label + ': START');
+  let timer;
+  try {
+    const result = await Promise.race([operation(), new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(label + ': timed out (15s)')), 15000);
+    })]);
+    log(label + ': PASS'); return result;
+  } finally { clearTimeout(timer); }
+}
+document.querySelector('#run').onclick = async () => {
+  document.querySelector('#run').disabled = true;
+  output.textContent = 'CLEAVE BLE diagnostic v1\n' + navigator.userAgent;
+  try {
+    device = await navigator.bluetooth.requestDevice({filters:[{services:['battery_service']},{services:[studio]}], optionalServices:['battery_service',studio]});
+    log('Selected: ' + device.name + '; selected gatt.connected=' + device.gatt.connected);
+    device.addEventListener('gattserverdisconnected', () => log('gattserverdisconnected event'));
+    await step('GATT connect', () => device.gatt.connect());
+    log('After connect: gatt.connected=' + device.gatt.connected);
+    const battery = await step('Battery service discovery', () => device.gatt.getPrimaryService('battery_service'));
+    const level = await step('Battery characteristic discovery', () => battery.getCharacteristic('battery_level'));
+    const value = await step('Battery value read', () => level.readValue());
+    log('Battery value=' + value.getUint8(0));
+    const service = await step('Studio service discovery', () => device.gatt.getPrimaryService(studio));
+    await step('Studio characteristic discovery', () => service.getCharacteristic('00000001-0196-6107-c967-c5cfb1c2482a'));
+    log('DONE: services/characteristics available. RPC, notifications and saving NOT tested.');
+  } catch (error) {
+    log('FAIL: ' + error.name + ': ' + error.message);
+    log('Final gatt.connected=' + (device?.gatt?.connected ?? 'unknown'));
+  }
+};
+document.querySelector('#release').onclick = () => {
+  device?.gatt?.disconnect(); log('Browser connection release requested');
+};
+</script></html>

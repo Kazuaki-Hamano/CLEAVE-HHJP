@@ -130,3 +130,20 @@ Tests cover connected-session release-before-connect and initially-disconnected
 connect paths. This is a recovery trial, not a confirmed Windows fix. Firmware
 remains b0c9f322 and no pairing reset is requested. Physical HID link teardown is
 not guaranteed by browser disconnect; Windows may retain other clients' access.
+
+
+## Read-only service isolation
+
+User's latest failure: Studio service discovery timeout, selected GATT disconnected.
+The connected-session recovery branch therefore does not address this observed
+attempt. GATT connect returned but service discovery did not. This does not
+establish whether Windows/browser discovery or peripheral ATT handling is stuck.
+
+`tools/dya-studio/ble_diagnostics.html` is served at
+http://localhost:8766/ble-diagnostics.html . Close DYA tabs without power-cycling,
+then select the same keyboard. The page logs connect, standard Battery service,
+battery characteristic/read, then Studio service/characteristic. Each operation
+has a 15-second bound. No Studio writes/subscriptions or settings changes occur.
+After timeout reload before a subsequent attempt; browser operations cannot be
+cancelled reliably. Syntax, served file identity and actual browser controls were
+verified. Physical diagnostic run remains user-pending. No firmware change.
