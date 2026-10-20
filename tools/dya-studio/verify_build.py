@@ -182,6 +182,15 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
                 assert node and 'status = "disabled"' in node[1], (side, slot)
                 bindings = re.search(r"bindings\s*=\s*<(.*?)>;", node[1], re.S)
                 assert bindings and len(re.findall(r"&trans\b", bindings[1])) == 70, (side, slot)
+        if "--runtime-macro" in sys.argv:
+            dts_entry = next(n for n in logs.namelist() if side in n and "Devicetree file" in n)
+            dts = logs.read(dts_entry).decode()
+            assert 'compatible = "cormoran,zmk-behavior-runtime-macro"' in dts, (side, "missing macro behavior node")
+            assert 'display-name = "Runtime Macro"' in dts, (side, "missing macro display name")
+            if side == "left":
+                assert "CONFIG_ZMK_BEHAVIOR_METADATA=y" in config
+                assert b"Runtime Macro\0" in payload, "Macro behavior metadata missing from central image"
+            print(side, "runtime macro assignment definition: PASS")
         marker = re.search(rb"CLEAVE_HHJP_UPDATE1\|" + side.upper().encode() + rb"\|([0-9a-f]{8})", payload)
         assert marker, (side, "update identity missing")
         identities[side] = marker[1].decode()
