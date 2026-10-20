@@ -18,7 +18,7 @@ function load(code, navigator) {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
   }}).outputText;
   vm.runInNewContext(js, {
-    module, exports: module.exports, navigator, console, Uint8Array, DOMException,
+    module, exports: module.exports, navigator, console, Uint8Array, DOMException, setTimeout, clearTimeout,
     ReadableStream, WritableStream, TransformStream, AbortController,
     require: name => name === 'async-mutex' ? mutex : {},
   });
@@ -93,7 +93,44 @@ async function gattCheck(patched, bluefy) {
     }
   } finally { writer.releaseLock(); transport.abortController.abort(); }
 }
+async function lifecycleCheck() {
+  const events = [];
+  const char = {
+    properties: {},
+    async stopNotifications() { events.push('stop'); },
+    async startNotifications() { events.push('start'); },
+    addEventListener() {}, removeEventListener() {},
+  };
+  const dev = {
+    name: 'test', addEventListener() {}, removeEventListener() {},
+    gatt: { connected: true,
+      async getPrimaryService() { return { async getCharacteristic() { return char; } }; },
+      disconnect() { events.push('disconnect'); },
+    },
+  };
+  const api = load(source('src/transport/gatt.ts', true), {
+    userAgent: 'Chrome', bluetooth: { async requestDevice() { return dev; } },
+  });
+  const transport = await api.connect();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  events.length = 0;
+  transport.abortController.abort();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(events, ['stop', 'disconnect']);
+  dev.gatt.getPrimaryService = async () => { throw new Error('simulated failure'); };
+  await assert.rejects(api.connect(), /BLE: Studio service discovery:.*simulated failure/);
+  const code = source('src/index.ts', true);
+  const body = code.match(/try \{\s*await byte_readable.cancel\(\);\s*\} finally \{\s*transport.abortController.abort\(reason\);\s*\}/)[0];
+  let aborted = false;
+  await assert.rejects(new Function('byte_readable', 'transport', 'reason',
+    'return (async () => {' + body + '})()')(
+    { cancel: async () => { throw new Error('cancel failure'); } },
+    { abortController: { abort() { aborted = true; } } }, undefined), /cancel failure/);
+  assert.equal(aborted, true);
+  console.log('PATCHED lifecycle: unsubscribe before disconnect, stage errors, teardown despite cancellation failure: PASS');
+}
 (async () => {
+  await lifecycleCheck();
   for (const patched of [false, true]) {
     await rpcChecks(patched);
     await gattCheck(patched, false);

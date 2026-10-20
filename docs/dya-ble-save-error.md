@@ -92,3 +92,25 @@ API. Actual module Content-Type and a conditional request returning fresh HTTP
 200 were checked. Screenshot: `output/dya-studio-ble-fix/startup-confirmed.png`.
 Temporary startup error diagnostics were removed. BLE hardware saving remains
 pending; this corrects the local delivery, not the public DYA website.
+
+
+## Reconnect lifecycle trial (2026-10-20)
+
+User confirmed: power cycle -> signal icon -> first connection/keymap succeeds;
+DYA disconnect -> connected-Bluetooth icon -> reconnect hangs. This isolates a
+reconnect-specific condition but does not establish which Windows/GATT/RPC stage
+stalls. Firmware `b0c9f322` is still hardware-pending and remains unmerged.
+
+Local client now explicitly awaits notification unsubscribe before releasing
+GATT. RPC pipeline teardown always aborts its transport in a finally block even
+if stream cancellation rejects. GATT connect, service/characteristic discovery,
+notification stop/start have individual 15-second limits with named errors.
+The user picker itself has no timeout. A timed-out browser operation cannot be
+cancelled through Web Bluetooth; reload the page before another attempt.
+
+Actual-source mock tests pass for unsubscribe-before-disconnect ordering,
+stage-labelled service errors, and transport abort despite cancellation failure,
+plus previous lock/framing regression tests. They do not prove Windows disconnect
+behavior or hardware recovery. Public DYA is unchanged. Trial uses localhost:8766
+with existing firmware; verify first connection, explicit disconnect/reconnect,
+then settings save/readback. Record the displayed BLE stage if it fails.

@@ -1,8 +1,25 @@
 diff --git a/src/index.ts b/src/index.ts
-index 34eca58..4809b36 100644
+index 34eca58..f58ccc1 100644
 --- a/src/index.ts
 +++ b/src/index.ts
-@@ -108,13 +108,21 @@ export async function call_rpc(
+@@ -33,9 +33,13 @@ export function create_rpc_connection(transport: RpcTransport, opts?: CreateRpcC
+     .pipeTo(transport.writable, { signal: opts?.signal });
+ 
+   reqPipelineClosed.catch((r) => {console.log("Closed error", r); return r}).then(async (reason: any) => {
+-    await byte_readable.cancel();
+-    transport.abortController.abort(reason);
+-  });
++    // Always tear down GATT, even if stream cancellation rejects.
++    try {
++      await byte_readable.cancel();
++    } finally {
++      transport.abortController.abort(reason);
++    }
++  }).catch(error => console.warn("RPC teardown:", error));
+ 
+   let response_readable = transport.readable
+     .pipeThrough(new TransformStream(get_decoder()), { signal: opts?.signal })
+@@ -108,13 +112,21 @@ export async function call_rpc(
      let request: Request = { ...req, requestId: conn.current_request++ };
  
      let writer = conn.request_writable.getWriter();
@@ -29,10 +46,55 @@ index 34eca58..4809b36 100644
      if (done || !value) {
        throw 'No response';
 diff --git a/src/transport/gatt.ts b/src/transport/gatt.ts
-index 189f486..cb56864 100644
+index 189f486..6fbc6f2 100644
 --- a/src/transport/gatt.ts
 +++ b/src/transport/gatt.ts
-@@ -97,16 +97,17 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
+@@ -51,13 +51,30 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
+ 
+   let abortController = new AbortController();
+ 
++  async function stage<T>(name: string, operation: () => Promise<T>): Promise<T> {
++    let timer: ReturnType<typeof setTimeout> | undefined;
++    try {
++      return await Promise.race([
++        operation(),
++        new Promise<never>((_, reject) => {
++          timer = setTimeout(() => reject(new Error(`BLE: ${name} timed out (15s)`)), 15000);
++        }),
++      ]);
++    } catch (error) {
++      dev.gatt?.disconnect();
++      throw new Error(`BLE: ${name}: ${error instanceof Error ? error.message : error}`);
++    } finally {
++      clearTimeout(timer);
++    }
++  }
++
+   let label = dev.name || 'Unknown';
+   if (!dev.gatt.connected) {
+-    await dev.gatt.connect();
++    await stage('GATT connection', () => dev.gatt!.connect());
+   }
+ 
+-  let svc = await dev.gatt.getPrimaryService(serviceUUID);
+-  let char = await svc.getCharacteristic(rpcChrcUUID);
++  let svc = await stage('Studio service discovery', () => dev.gatt!.getPrimaryService(serviceUUID));
++  let char = await stage('RPC characteristic discovery', () => svc.getCharacteristic(rpcChrcUUID));
+   
+   let onStart = new Deferred<void>();
+ 
+@@ -65,8 +82,8 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
+     async start(controller) {
+       // Reconnect to the same device will lose notifications if we don't first force a stop before starting again.      
+       try {
+-        await char.stopNotifications();
+-        await char.startNotifications();
++        await stage('stop previous notifications', () => char.stopNotifications());
++        await stage('start notifications', () => char.startNotifications());
+         onStart.resolve();
+       } catch (e) {
+         onStart.reject(e);
+@@ -97,16 +114,17 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
    let writable = new WritableStream({
      async write(chunk) {
          await onStart.promise;
@@ -58,3 +120,20 @@ index 189f486..cb56864 100644
          }
          return;
      },
+@@ -117,7 +135,15 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
+   
+   abort_cb = async (ev: Event) => {
+     sig.removeEventListener("abort", abort_cb);
+-    dev.gatt?.disconnect();
++    // Windows can keep the HID GATT link alive after the browser releases it.
++    // Explicitly remove this session's subscription before releasing GATT.
++    try {
++      await stage('disconnect notifications', () => char.stopNotifications());
++    } catch (error) {
++      console.warn('BLE notification cleanup:', error);
++    } finally {
++      dev.gatt?.disconnect();
++    }
+   }
+ 
+   sig.addEventListener("abort", abort_cb);
