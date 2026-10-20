@@ -46,13 +46,15 @@ index 34eca58..f58ccc1 100644
      if (done || !value) {
        throw 'No response';
 diff --git a/src/transport/gatt.ts b/src/transport/gatt.ts
-index 189f486..6fbc6f2 100644
+index 189f486..0f64853 100644
 --- a/src/transport/gatt.ts
 +++ b/src/transport/gatt.ts
-@@ -51,13 +51,30 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
+@@ -50,14 +50,47 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
+   }
  
    let abortController = new AbortController();
- 
++  const selectedGattConnected = dev.gatt!.connected;
++
 +  async function stage<T>(name: string, operation: () => Promise<T>): Promise<T> {
 +    let timer: ReturnType<typeof setTimeout> | undefined;
 +    try {
@@ -64,17 +66,33 @@ index 189f486..6fbc6f2 100644
 +      ]);
 +    } catch (error) {
 +      dev.gatt?.disconnect();
-+      throw new Error(`BLE: ${name}: ${error instanceof Error ? error.message : error}`);
++      throw new Error(`BLE: ${name}: ${error instanceof Error ? error.message : error} [selected GATT: ${selectedGattConnected ? 'connected' : 'disconnected'}]`);
 +    } finally {
 +      clearTimeout(timer);
 +    }
 +  }
-+
+ 
    let label = dev.name || 'Unknown';
-   if (!dev.gatt.connected) {
+-  if (!dev.gatt.connected) {
 -    await dev.gatt.connect();
-+    await stage('GATT connection', () => dev.gatt!.connect());
++  // Do not reuse a browser GATT session left over from an earlier attempt.
++  // This releases only the browser session; Windows may retain its HID link.
++  if (dev.gatt.connected) {
++    await stage('release previous GATT session', () => new Promise<void>((resolve) => {
++      const onDisconnected = () => {
++        dev.removeEventListener('gattserverdisconnected', onDisconnected);
++        resolve();
++      };
++      dev.addEventListener('gattserverdisconnected', onDisconnected, { once: true });
++      dev.gatt!.disconnect();
++      // disconnect() updates connected synchronously in some implementations.
++      if (!dev.gatt!.connected) {
++        dev.removeEventListener('gattserverdisconnected', onDisconnected);
++        resolve();
++      }
++    }));
    }
++  await stage('GATT connection', () => dev.gatt!.connect());
  
 -  let svc = await dev.gatt.getPrimaryService(serviceUUID);
 -  let char = await svc.getCharacteristic(rpcChrcUUID);
@@ -83,7 +101,7 @@ index 189f486..6fbc6f2 100644
    
    let onStart = new Deferred<void>();
  
-@@ -65,8 +82,8 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
+@@ -65,8 +98,8 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
      async start(controller) {
        // Reconnect to the same device will lose notifications if we don't first force a stop before starting again.      
        try {
@@ -94,7 +112,7 @@ index 189f486..6fbc6f2 100644
          onStart.resolve();
        } catch (e) {
          onStart.reject(e);
-@@ -97,16 +114,17 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
+@@ -97,16 +130,17 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
    let writable = new WritableStream({
      async write(chunk) {
          await onStart.promise;
@@ -120,7 +138,7 @@ index 189f486..6fbc6f2 100644
          }
          return;
      },
-@@ -117,7 +135,15 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
+@@ -117,7 +151,15 @@ export async function connect(options: Partial<RequestDeviceOptions> = {}): Prom
    
    abort_cb = async (ev: Event) => {
      sig.removeEventListener("abort", abort_cb);

@@ -73,7 +73,7 @@ async function gattCheck(patched, bluefy) {
     name: 'test keyboard',
     addEventListener(name, cb) { if (name === 'gattserverdisconnected') disconnected = cb; },
     removeEventListener() {},
-    gatt: { connected: true, async getPrimaryService() { return { async getCharacteristic() { return char; } }; },
+    gatt: { connected: false, async connect() { this.connected = true; }, async getPrimaryService() { return { async getCharacteristic() { return char; } }; },
       disconnect() { disconnected?.(); } },
   };
   const api = load(source('src/transport/gatt.ts', patched), {
@@ -104,8 +104,9 @@ async function lifecycleCheck() {
   const dev = {
     name: 'test', addEventListener() {}, removeEventListener() {},
     gatt: { connected: true,
+      async connect() { events.push('connect'); this.connected = true; },
       async getPrimaryService() { return { async getCharacteristic() { return char; } }; },
-      disconnect() { events.push('disconnect'); },
+      disconnect() { events.push('disconnect'); this.connected = false; },
     },
   };
   const api = load(source('src/transport/gatt.ts', true), {
@@ -113,6 +114,7 @@ async function lifecycleCheck() {
   });
   const transport = await api.connect();
   await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(events.slice(0, 2), ['disconnect', 'connect']);
   events.length = 0;
   transport.abortController.abort();
   await new Promise(resolve => setTimeout(resolve, 0));

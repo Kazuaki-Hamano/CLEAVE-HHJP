@@ -114,3 +114,19 @@ plus previous lock/framing regression tests. They do not prove Windows disconnec
 behavior or hardware recovery. Public DYA is unchanged. Trial uses localhost:8766
 with existing firmware; verify first connection, explicit disconnect/reconnect,
 then settings save/readback. Record the displayed BLE stage if it fails.
+
+
+## Service-discovery timeout follow-up
+
+Hardware feedback: reconnect fails with `Studio service discovery timed out (15s)`.
+The failure precedes characteristic discovery, subscription and Studio RPC.
+Notification cleanup alone did not resolve it. The browser/UI icon does not prove
+the JavaScript GATT object's `connected` state or establish firmware culpability.
+
+Next local trial: if the selected browser GATT session is connected, release it
+before connecting; always call connect before service discovery. Retain the
+15-second stage bounds and include selected GATT state in failure details.
+Tests cover connected-session release-before-connect and initially-disconnected
+connect paths. This is a recovery trial, not a confirmed Windows fix. Firmware
+remains b0c9f322 and no pairing reset is requested. Physical HID link teardown is
+not guaranteed by browser disconnect; Windows may retain other clients' access.
