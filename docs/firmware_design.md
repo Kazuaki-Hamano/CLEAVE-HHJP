@@ -1,119 +1,62 @@
-﻿# ZMKファームウェア設計書
+# ZMKファームウェア設計書
 
-> DYA trackpad settings trial: see [dya-trackpad-settings.md](dya-trackpad-settings.md). Windows trackpad configuration is retired on this branch; battery and firmware-update support remain. Legacy protocol descriptions below are historical.
+現在のファームウェアはDYA Studioに対応した構成です。操作は[DYA Studioガイド](dya-studio.md)、配線は[Cirque組み込み](cirque-trackpad-integration.md)、組み立ては[ビルドガイド](../build-guide/README.md)を参照してください。
 
-> DYA Studio trial branch: build/dependency changes and validation status are tracked in [dya-studio-migration.md](dya-studio-migration.md). The v0.3 build/runtime results below describe the pre-migration baseline.
-
-この文書は、このリポジトリのソース・設定・ビルド定義に対応します。
-組み立てと標準配布版の導入は[ビルドガイド](../build-guide/README.md)、Windowsアプリの操作は[バッテリーアプリ](../tools/battery/README.md)を参照してください。
-標準配布版と、このフォークで追加した機能は区別して扱います。
-
-## 1. 構成
+## 構成と依存先
 
 | 項目 | 現在の構成 |
 |---|---|
 | マイコン | 左右各1個のXIAO nRF52840 Plus |
-| ZMKビルド用board名 | `seeeduino_xiao_ble` |
+| ビルドboard | `xiao_ble//zmk` |
 | キー数 | 70（左31、右39） |
-| 左側 | セントラル（親機）。右側の入力を集約し、ホストへ送信 |
-| 右側 | ペリフェラル（子機）。左側へBLE接続 |
-| ホスト接続 | 左側からUSBまたはBluetooth |
-| ZMK | `config/west.yml` の `v0.3-branch` |
-| RGB LEDモジュール | `caksoylar/zmk-rgbled-widget` の `v0.3` |
-| 更新ファイル | UF2（左右用とsettings_reset用の3ターゲット） |
+| 左側 | セントラル。USB／BluetoothでPCへ接続し、右側の入力を集約 |
+| 右側 | ペリフェラル。左側へBLE接続。`CONFIG_BT_MAX_CONN=1` |
+| ZMK | cormoran/zmk `e5c9b6915b56801193e359dd9bad4a167ce0d1b8` |
+| Zephyr | cormoran/zephyr `63363d92c475ad203b35e9047cef7ecd8706a6fc`（4.1系） |
+| RGB LED | caksoylar/zmk-rgbled-widget `e6b467792a1dabef8cfa5c9fd26bfefc9c16662b` |
+| 配布物 | 左右のUF2とsettings_reset。通常の更新は左右UF2のみ |
 
-左右間の通信はBLEです。左側をUSB接続してキーボード・マウス入力、Studio、残量アプリを使用できます。残量アプリのためにPCとBluetooth接続する必要はありません。右側の状態を取得するには左右間の接続が必要です。ホストへの入力先はZMKの出力先選択に従います。
+完全な依存一覧は [`config/west.yml`](../config/west.yml)。ローカル修正は `modules/` の各 `UPSTREAM.md`、`src/pinnacle/UPSTREAM.md`、`src/studio/UPSTREAM.md` に出典を記録しています。
 
-## 2. ファイルの役割
+## 設定・実装の読み込み
 
-| ファイル・ディレクトリ | 役割 |
-|---|---|
-| [`config/cleave_hhjp.keymap`](../config/cleave_hhjp.keymap) | 通常・Fnの2レイヤー、hold-tap、Bluetooth操作 |
-| [`cleave_hhjp.dtsi`](../config/boards/shields/cleave_hhjp/cleave_hhjp.dtsi) | 70キーの物理レイアウト、5行×15列の変換、共通kscan |
-| [`cleave_hhjp_left.overlay`](../config/boards/shields/cleave_hhjp/cleave_hhjp_left.overlay) | 左側GPIOマトリックス |
-| [`cleave_hhjp_right.overlay`](../config/boards/shields/cleave_hhjp/cleave_hhjp_right.overlay) | 右側GPIOマトリックス、列オフセット7 |
-| [`cleave_hhjp_left.conf`](../config/boards/shields/cleave_hhjp/cleave_hhjp_left.conf) | 左側pointing、残量取得、USB HID数、Studio |
-| [`cleave_hhjp.conf`](../config/boards/shields/cleave_hhjp/cleave_hhjp.conf) | 共通名の設定ファイル。現在のビルドで読み込まれるとは限らない（3節） |
-| [`Kconfig.defconfig`](../config/boards/shields/cleave_hhjp/Kconfig.defconfig) | キーボード名、分割構成、左側の役割と接続数の既定値 |
-| [`config/west.yml`](../config/west.yml) / [`build.yaml`](../build.yaml) | 依存先とビルドターゲット |
-| [`zephyr/module.yml`](../zephyr/module.yml) / [`CMakeLists.txt`](../CMakeLists.txt) | 独自ソース・DTS bindingの登録とビルドID生成 |
-| [`src/`](../src) / [`dts/bindings/`](../dts/bindings) | マウス速度、残量・充電状態・更新処理とbinding定義 |
-| [`tools/battery/`](../tools/battery/README.md) | Windowsアプリ、EXE作成、UF2更新・検証 |
-| [`tools/case-design/`](../tools/case-design/README.md) | STL断面によるケース近似再構成 |
-| `output/` | 生成物・依存パッケージ・ログ。Git管理対象外 |
+- 左側は `config/boards/shields/cleave_hhjp/cleave_hhjp_left.conf`、右側は同ディレクトリの `cleave_hhjp_right.conf` を読み込みます。共通名の `.conf` の内容だけで実効値を判断しません。
+- ビルド定義は [`build.yaml`](../build.yaml)。左側に `studio-rpc-usb-uart` を指定します。DYAのホストRPCは左側だけに組み込みます。
+- 左側のUSB HIDデバイス数は2。標準キーボード／マウスと独自の残量・更新機能を併用します。
+- split relayのデータ長は240バイト。左右のsplit用スタックは2048バイト。システムworkqueueは4096バイトです。
+- スリープは左右とも有効、初期値30分。各マトリックスがwake sourceで、パッドへの接触は復帰条件ではありません。DYAで保存した待機時間が初期値より優先されます。
+- GATTトランスポートは `src/studio/gatt_rpc_transport.c` を中央側だけに組み込み、ATT MTUに従った分割と接続参照の解放を補正しています。
 
-`cleave_hhjp_right.conf` は現在存在しません。キーマップはシールド内ではなく `config/cleave_hhjp.keymap` にあります。
+実効値はActionsの左右それぞれのKconfig／Devicetreeログで確認します。UF2と一緒に保存した `build-logs.zip` が確認資料です。
 
-## 3. 設定の読み込み
+## キーマップとレイアウト
 
-設定ファイルの記述と実効設定は区別します。Actionsログの `Merged configuration` と各ターゲットのKconfig出力を確認してください。
+[`config/cleave_hhjp.keymap`](../config/cleave_hhjp.keymap) の `default_layer` と `fn_layer` は各70 bindingです。追加用の4レイヤー枠は初期状態では無効です。
 
-最新の成功ビルド `fdff9be9`（Run `38974769000`）では、左側は `cleave_hhjp_left.conf` を読み込み、右側はこのシールドの `.conf` を読み込んでいません。両側とも `cleave_hhjp.conf` はマージされていません。今後のビルド結果も毎回確認します。
+左右の専用Fnは `&mo 1`。旧LANG2位置は `&lt 1 INT5`、旧LANG1位置は `&lt 1 INT4`、独立Kanaは `&kp LANG1`。hold-tapは200ms、`tap-preferred`。Fn＋Ctrl＋1～5でBluetoothプロファイル、Fn＋Ctrl＋Backspaceで現在のペアリングを消去します。Fn＋UはDYAのBLE検出、Fn＋B／Nは左右のUF2モード移行です。
 
-左側 `.conf` の明示設定は次のとおりです。
+70位置のtransform、物理レイアウトとkscanは `cleave_hhjp.dtsi`、行列GPIOは左右overlayに定義します。右側は `col-offset=7`。右側1～4段目の表示には実物と同じ段ずれを付けています。DYAに保存したキー配置はコンパイル時の初期配置より優先されます。
 
-| 設定 | 値 |
-|---|---|
-| `CONFIG_ZMK_POINTING` | `y` |
-| `CONFIG_ZMK_BATTERY_REPORTING` | `y` |
-| `CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING` | `y` |
-| `CONFIG_USB_HID_DEVICE_COUNT` | `2` |
-| `CONFIG_ZMK_STUDIO` | `y` |
-| `CONFIG_ZMK_STUDIO_LOCKING` | `n` |
+Runtime Macroは `<behaviors/runtime_macro.dtsi>` から `&rmacro <slot>` を公開します。マクロ本文とキー割り当ては別々に保存します。コンボと押下表示、接続先・OS別レイヤーも有効です。
 
-`Kconfig.defconfig` は左側の `ZMK_KEYBOARD_NAME` を `CLEAVE HHJP`、`ZMK_SPLIT_ROLE_CENTRAL` を `y`、`ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS` を `1`、`BT_MAX_CONN` を `5` に設定します。左右とも `ZMK_SPLIT=y` が既定です。Bluetoothプロファイル1〜5の選択と同時接続数は別の概念です。
+## トラックパッド
 
-共通名ファイルには `CONFIG_ZMK_IDLE_TIMEOUT=300000`（5分）、`CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=3600000`（60分）、`CONFIG_ZMK_SLEEP=y`、NFCピンのGPIO化、+8dBm、残量proxyなどが記述されています。これらは現在の実効設定ではありません。現行ビルドのidle timeoutは左右とも `30000`（30秒）で、`CONFIG_ZMK_SLEEP=y` はありません。右側の`CONFIG_INPUT_PINNACLE=y`もビルドログで確認済みです。
+左右のCirque TM040040は追加GPIOへSPI接続します。右側の入力は `trackpad_split` からBLEで左側へ、左側の入力はローカルlistenerへ送ります。右はFn中もカーソル、左は縦横スクロールとFn中の戻る／進む。Fn＋Q／Eは左右クリックです。
 
-スリープ、NFCピン、BLE出力などを変更する場合は、実際に読み込まれる側の設定へ反映し、Kconfig・生成DTS・実機で確認します。この文書の更新ではファームウェア設定を変更していません。
+速度、加速、最大倍率、左右それぞれのスクロール量はDYAのカスタム設定へ移行しました。旧USB Feature 7の設定version 3は廃止し、Windowsアプリからは変更しません。パッド別の速度・端数状態を保持し、左スクロールが右カーソルの加速に影響しないようにしています。
 
-## 4. マトリックスと物理レイアウト
+`trackpad_scroll` は互換用の定義として残っていますが、右listenerでFnスクロールへ切り替える処理には使いません。チップの感度は1x、Sleep Intervalは50。右端スクロールはPinnacle内蔵の機能で、2本指スクロールの実装ではありません。
 
-| 側 | 列 | 行 |
-|---|---|---|
-| 左（7列×5行） | `xiao_d` 0〜6 | `xiao_d` 7〜10、`gpio0` 9 |
-| 右（8列×5行） | `xiao_d` 0〜7 | `xiao_d` 8〜10、`gpio0` 9・10 |
+## DYA設定・診断
 
-ダイオード方向は `col2row`。列は `GPIO_ACTIVE_HIGH`、行は `GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN` です。P0.09/P0.10はNFC兼用ピンです。`xiao_d` の物理GPIO対応は使用するboard定義を参照します。
+BLE管理、活動設定の永続同期、接続先・OS別レイヤー、キースキャン、ウォッチドッグ、スタック使用量に対応しています。同期の保存完了応答や表示範囲、BLE再接続の運用は[DYA Studioガイド](dya-studio.md)を参照してください。
 
-`cleave_hhjp.dtsi` の `default_transform` は5行×15列で70位置を列挙し、右側overlayが `col-offset = <7>` を設定します。`cleave_hhjp_physical_layout` はtransformとkscanを参照し、`chosen` の `zmk,physical-layout` から選択します。キーの幅・高さ・座標はcenti-keyunits（1U=100）で、ミリメートルではありません。
-RGB LEDの定義はこのdtsiにはなく、boardと `rgbled_adapter` モジュールを使用します。
+## ビルドと検証
 
-## 5. キーマップ
+確認済みのソースは `9b4ba539`、埋込ビルドIDは `e377a35a`。成果物の場所と戻し用は[生成物一覧](generated-output.md)に記載します。ドキュメント整理のコミットはファームウェアの内容を変えません。以後のソースビルドでは識別子が変わるため、検証済みUF2と新規ビルドを区別します。
 
-各レイヤーには70個のbindingがあります。
+Actionsは固定リビジョンの再利用ワークフローを呼び出します。`tools/battery/verify_firmware.py` でUF2／HID、`tools/dya-studio/verify_build.py` で実効設定とDYA機能、`tools/battery/dev/verify_current.py` でキーマップを確認します。構成変更後は該当する実機確認も行います。
 
-| 番号 | ノード / 表示名 | 内容 |
-|---|---|---|
-| 0 | `default_layer` / Default | HHKB JPベースの通常入力 |
-| 1 | `fn_layer` / Fn | F1〜F12、音量・ミュート・Eject、ナビゲーション、Bluetooth、UF2移行 |
-
-左右の専用Fnキーは `&mo 1`。左の旧LANG2位置は `&lt 1 INT5`、右Space直後の旧LANG1位置は `&lt 1 INT4` です。短押しはそれぞれInternational5/International4、200msのhold-tap判定後は両方ともFnになります。隣の独立したKana位置は従来の `&kp LANG1` です。右側の並びはINT4/Fn、Kana、Alt、Fnです。`&lt` は `tap-preferred` で、別キーを押しただけでは即座にhold確定しません。Mouseレイヤーは削除しました。
-
-Fn+Ctrl+1〜5は `BT_SEL 0`〜`BT_SEL 4`、Fn+Ctrl+Backspaceは `BT_CLR`。CtrlなしではF1〜F5 / Deleteです。`zmk,behavior-mod-morph` で実装しています。
-
-### タッチパッド
-
-右側TM040040の移動と左右タップクリックをinput-splitで左側へ転送します。`cleave_hhjp_left.overlay`のlistenerはFnの有無にかかわらず`trackpad_speed`を適用します。Fn中の縦スクロール切り替えを削除し、マウスボタンキーを保持しながらカーソルを動かせるようにしました。ボタンイベントは変更しません。`trackpad_scroll`の旧processorは互換用の定義として残っていますがlistenerからは使用しません。
-
-右パッドはLANG2・旧LANG1長押しと専用Fnのいずれでもカーソル移動を継続します。旧マウスレイヤー、`src/mouse_speed.c`、専用behavior/scalerのbindingとCMake参照は削除しました。`src/trackpad_settings.c`でUSB Feature 7 version 3の変更・保存・固定感度1xの確認を行います。基本速度と最大倍率は0.1倍刻み、スクロール量は0.1～4.0倍です。旧保存値は引き継ぎ、感度を1x、スクロール量を1.0倍へ移行します。仕様と確認範囲は[タッチパッド設定](../tools/battery/trackpad-settings.md)を参照してください。設定の反映・保存・再起動後の保持はユーザー確認済みです。スクロール量は使い心地に合わせて調整してください。
-
-### UF2移行
-
-左パッドの役割は通常時の縦横スクロールとFn中の左右ナビゲーションです。`trackpad_local_control`はFnレイヤーを確認し、横64カウント以上・横成分が縦の2倍以上でスワイプ1回を確定します。180msの無移動、またはFn状態変更で判定を再開します。`trackpad_navigation.c`はZMKのConsumer AC Back / AC Forwardを30ms押して解放します。右側はFn中も速度・加速を適用してカーソルを動かします。
-
-`cleave_hhjp_trackpad_spi.dtsi`のSPI配線を左右で共有します。`trackpad_local_listener`は左ローカルの`trackpad_local_control`、`trackpad_listener`は右input-splitの速度processorを使います。右の加速履歴・端数と、左の軸別スクロール端数・ジェスチャー判定状態は独立しています。左側にも`CONFIG_SPI=y`とPinnacleドライバーがあり、アプリのHID version 3で左右スクロール量を別々に扱います。両パッドの通常動作はユーザー確認済みで、今回のスクロール・スワイプは実機確認待ちです。
-
-Fn+B（左）/ Fn+N（右）を2秒長押しすると、操作した側で `&bootloader` を呼びます。短押しはB / ＋。`boot_hold` は `tap-preferred` のhold-tapです。
-USBを対象側につなぎ、左右が通常動作・接続している状態で操作します。詳細は[キー操作の手順](bootloader-keys.md)を参照してください。
-
-## 6. ZMK Studio
-
-左側設定の `CONFIG_ZMK_STUDIO=y` と左ビルドの `studio-rpc-usb-uart` snippetでUSB経由の編集に対応します。`CONFIG_ZMK_STUDIO_LOCKING=n` のため、このビルドはロック解除操作を要求しません。本リポジトリの案内は左側USB接続を使用します。
-
-Studioでは既存のキー割り当て・ファームウェアに定義済みのbehaviorを編集します。新規マクロ・コンボ・behaviorの定義や、DTSにないレイヤーの追加はソース側で行います。JSONエクスポートや新規マクロ作成をこの構成の実装済み機能として案内しません。[ZMK v0.3のStudio説明](https://v0-3-branch.zmk.dev/docs/features/studio)も参照してください。
-
-Studio保存済みの配置は `.keymap` の初期配置に優先します。新しい初期配置を使う場合はRestore Stock Settingsを実行します。通常の更新でsettings_resetは不要です。使用するとペアリング・保存済み設定を消去します。
 
 ## 7. USB残量・充電状態・更新プロトコル
 
@@ -127,7 +70,6 @@ Studio保存済みの配置は `.keymap` の初期配置に優先します。新
 | 4 | 8（Windows送信時32） | ID=4、version=1、対象側、ASCII `BOOT`、ゼロ埋め |
 | 5 | 32 | 子機の更新対応情報キャッシュ |
 | 6 | 16 | 左側の診断情報：残量・電源状態・センサーのキャッシュ電圧/残量・valid flags・uptime・最終残量変化イベントからの経過秒 |
-| 7 | 32 | version=3、カーソル速度・加速・固定感度1x・左右スクロール量の取得、変更、明示保存、通信診断 |
 
 Windowsではcollection最大長32バイトでFeature Reportを読み、ID1/2は有効な7/6バイトを取り出します。ID4は8または32バイトを受け付け、余白はゼロのみです。
 診断用ID6も32バイトで読み、先頭16バイトを取り出します。`sensor_channel_get` で既存センサーのキャッシュを取得し、追加のADCサンプリングは行いません。取得できない値はflagsでunknownを表します。残量変化イベントの経過時間はADC計測の経過時間とは異なります。記録ツールは[診断手順](../tools/battery/README.md#sudden-battery-percentage-changes-diagnostics)を参照してください。
@@ -153,41 +95,3 @@ ID3/5は `[ID, version, side, flags, build8, CHHP, chipID8, reserved]`。sideは
 初回の右更新は旧親機で検証できずpendingになることがあります。同じアプリセッション内で左更新を確認した後、右のビルドを追加で30秒確認します。USBケーブル1本の場合の切り替え手順は[アプリの説明](../tools/battery/README.md)を参照してください。
 
 キー操作による左右のUF2ドライブ表示は確認済みです。アプリによる実機への書き込みと、再起動後の左右ビルド照合は未確認です。
-
-## 9. GitHub Actionsと配布
-
-[`build-firmware.yml`](../.github/workflows/build-firmware.yml) は対象パスの変更を伴う `main` pushとPull Requestで起動します。PRの宛先ブランチ制限はありません。対象パスは `config/**`、`src/**`、`tools/battery/**`、`CMakeLists.txt`、`build.yaml`、ワークフロー自身です。`build-user-config.yml@v0.3-branch` を呼び出します。
-`dts/**` と `zephyr/**` は現在のpath filterに含まれないため、それらだけの変更では起動しません。
-
-`build.yaml` は次の構成です。
-
-```yaml
-include:
-  - board: seeeduino_xiao_ble
-    shield: cleave_hhjp_left rgbled_adapter
-    snippet: studio-rpc-usb-uart
-  - board: seeeduino_xiao_ble
-    shield: cleave_hhjp_right rgbled_adapter
-  - board: seeeduino_xiao_ble
-    shield: settings_reset
-```
-
-Studioの有効化は左側 `.conf` にあります。`firmware` artifact内の左右用UF2を対象へ書き込みます。settings_resetはアプリ更新の対象外です。
-[`release.yml`](../.github/workflows/release.yml) の手動実行は `run_id`、`version`、`prerelease` を受け取り、指定runのartifactをReleaseへ添付します。EXEはこのActionsでは生成せず、[`build-exe.ps1`](../tools/battery/build-exe.ps1) で作成します。
-
-カスタマイズするときはこのリポジトリ全体をフォークしてください。シールド定義だけを別テンプレートへコピーすると独自CモジュールやDTS bindingが欠落します。
-ローカルビルドでは依存を `config/west.yml` に従って取得し、`ZMK_CONFIG` に `config/`、`ZMK_EXTRA_MODULES` にこのリポジトリのルートを指定します。追加モジュールの指定は[ZMKのビルド説明](https://zmk.dev/docs/development/local-toolchain/build-flash)を参照してください。この文書の照合ではローカルのファームウェア再ビルドは実施していません。
-
-## 10. 変更後の確認
-
-- Actionsの読み込みログと実効Kconfig、生成DTSを確認する
-- UF2の構造・HID記述子・設定を[検証ツール](../tools/battery/firmware-tools.md)で確認する
-- 対象側へ書き込み、通常入力・Fn・マウス・Bluetooth切替・Studioを確認する
-- 残量・充電表示はUSBの抜き差しと子機の電源OFF/ONで確認する
-- 更新機能は右→左で実機確認し、再起動後のビルド一致を確認する
-
-ケース・配線・バッテリーの実装条件は[組み立てガイド](../build-guide/01-ASSEMBLY.md)と[ケース設計ガイド](../build-guide/03-2-CUSTOM_CASE.md)に従います。ソース確認だけでは寸法の適合、充電時間、電池持ち、実機の更新成功を証明しません。
-
-Fn＋Qは左クリック、Fn＋Eは右クリックです。キーを押している間はボタンを保持し、離すと解放します。FnとQを押したまま右パッドで移動し、Qを離すとドロップできます。最初の確認には専用Fnキーを使用し、LANG2・旧LANG1長押しの場合は200ms待ってからクリックキーを押します。
-
-右のチップ内蔵スクロールは正式採用です。`trackpad_speed`はINPUT_REL_WHEELに独立した右端倍率を適用します。右端倍率・左スクロール倍率はそれぞれ0.1～4.0倍、0.1倍刻み。HID Report 7は32バイトのままversion 3とし、byte28～29に左倍率、byte30～31に右端倍率を格納します。保存データはversion 3・12バイトで、v1/v2を移行します。左ファームウェアとアプリの更新で対応し、右は内蔵スクロール版を継続使用できます。

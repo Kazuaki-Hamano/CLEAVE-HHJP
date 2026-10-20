@@ -103,7 +103,7 @@ GitHub上で直接ファイルを編集する場合は、Gitのコマンド操�
 | 目的 | ファイル |
 |---|---|
 | キー割り当てを変更する | [`cleave_hhjp.keymap`](../config/cleave_hhjp.keymap) |
-| スリープ時間やBluetooth関連の設定を変更する | 実際に読み込まれる側の `.conf`（[設計書](../docs/firmware_design.md#3-設定の読み込み)を参照） |
+| スリープ時間やBluetooth関連の設定を変更する | DYA Studio、または実際に読み込まれる側の `.conf`（[設計書](../docs/firmware_design.md#設定実装の読み込み)を参照） |
 | 左右の配線やキーマトリックスを変更する | [`cleave_hhjp_left.overlay`](../config/boards/shields/cleave_hhjp/cleave_hhjp_left.overlay) / [`cleave_hhjp_right.overlay`](../config/boards/shields/cleave_hhjp/cleave_hhjp_right.overlay) |
 
 通常のキーマップ変更では、`.overlay`、`build.yaml`、`west.yml`は変更しません。
@@ -142,7 +142,7 @@ GitHub上で直接ファイルを編集する場合は、Gitのコマンド操�
 7. ダウンロードしたファイルを展開します。
 8. [ファームウェアのダウンロード・書き込み・接続確認](02-FIRMWARE.md)と同じ手順で、生成されたUF2ファイルを左右それぞれのXIAO nRF52840 Plusへ書き込みます。
 
-現在のワークフローは対象パスの変更を伴う`main`へのpushまたはPull Requestで起動します。`main`以外のブランチにpushしただけでは起動しないため、PRを作成してください。対象パスと追加モジュールの構成は[設計書](../docs/firmware_design.md#9-github-actionsと配布)を参照してください。
+現在のワークフローは対象パスの変更を伴う`main`、登録済み試験ブランチへのpush、またはPull Requestで起動します。未登録のブランチで試す場合はPRを作成してください。対象パスはワークフロー、構成は[設計書](../docs/firmware_design.md#ビルドと検証)を参照してください。
 
 > [!NOTE]
 > GitHub Actionsの画面やartifactのダウンロード方法は、ZMK公式の[Installing ZMK](https://zmk.dev/docs/user-setup)にも説明があります。

@@ -54,6 +54,7 @@ CLEAVE HHJP の組み立て、ファームウェア書き込み、ケース作�
 
 - [追加カスタマイズ：TM040040タッチパッド取り付け](06-TRACKPAD.md)（任意）
 - [このフォークのファームウェア設計](../docs/firmware_design.md)
+- [DYA Studioでのキー・マクロ・トラックパッド設定](../docs/dya-studio.md)
 - [Windows残量・充電状態アプリと更新手順](../tools/battery/README.md)
 - [キー操作によるUF2モード移行](../docs/bootloader-keys.md)
 - [ファームウェア配布ページ](https://github.com/Rimebeck/Cleave-HHJP/releases)

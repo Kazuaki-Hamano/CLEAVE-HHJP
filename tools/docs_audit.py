@@ -37,8 +37,10 @@ assert 'mouse_layer {' not in keymap
 assert '&lt 1 INT4' in keymap
 for source, tokens in {
     'config/boards/shields/cleave_hhjp/cleave_hhjp_left.conf': ['CONFIG_ZMK_POINTING=y', 'CONFIG_USB_HID_DEVICE_COUNT=2', 'CONFIG_ZMK_STUDIO_LOCKING=n'],
-    'config/west.yml': ['revision: v0.3-branch', 'revision: v0.3'],
-    'build.yaml': ['board: seeeduino_xiao_ble', 'snippet: studio-rpc-usb-uart'],
+    'config/west.yml': ['revision: e5c9b6915b56801193e359dd9bad4a167ce0d1b8', 'revision: 63363d92c475ad203b35e9047cef7ecd8706a6fc'],
+    'build.yaml': ['board: xiao_ble//zmk', 'snippet: studio-rpc-usb-uart'],
+    'config/cleave_hhjp.keymap': ['#include <behaviors/runtime_macro.dtsi>', '&lt 1 INT5'],
+    'config/boards/shields/cleave_hhjp/cleave_hhjp_right.conf': ['CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_STACK_SIZE=2048', 'CONFIG_ZMK_SLEEP=y'],
     'src/app_update.c': ['K_MSEC(250)', 'K_SECONDS(5)', '<= 20000'],
     'tools/battery/firmware_update.py': ['drive_timeout=90', 'verify_timeout=60', '0x27000', '0xec000'],
 }.items():
@@ -46,6 +48,6 @@ for source, tokens in {
     for token in tokens:
         assert token in content, (source, token)
 assert 'trackpad_scroll' in design
-assert 'version 3' in design
+assert 'Feature 7' in design
 print('Documented source constants and 2 x 70 bindings: OK')
 raise SystemExit(bool(bad))

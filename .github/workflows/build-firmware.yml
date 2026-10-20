@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - feature/dya-runtime-macro
       - feature/dya-studio
       - feature/dya-connection-settings
       - feature/deep-sleep-trial
@@ -15,6 +16,7 @@ on:
       - feature/dya-host-layers
       - feature/dya-layout-stagger
       - feature/dya-ble-discovery
+      - fix/dya-ble-transport
     paths:
       - 'config/**'
       - 'src/**'
