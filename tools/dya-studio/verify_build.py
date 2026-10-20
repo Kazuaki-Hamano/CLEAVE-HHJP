@@ -49,6 +49,11 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
         if "--stack-trial" in sys.argv:
             assert stack == 2048, (side, stack_setting, stack)
         print(side, "split worker stack:", stack)
+        if "--ble-transport-fix" in sys.argv:
+            assert ("CLEAVE Studio GATT override:" in config) == (side == "left"), (side, "transport replacement")
+            objects = re.findall(r"Building C object [^\n]*gatt_rpc_transport[.]c[.]obj", config)
+            assert len(objects) == (1 if side == "left" else 0), (side, "duplicate or missing GATT object", objects)
+            print(side, "single role-correct patched GATT transport: PASS")
         if "--ble-discovery" in sys.argv:
             for setting in ("CONFIG_ZMK_STUDIO_TRANSPORT_BLE=y", "CONFIG_ZMK_STUDIO_TRANSPORT_UART=y"):
                 assert bool(re.search(r"(?m) " + re.escape(setting) + r"$", config)) == (side == "left"), (side, setting)
