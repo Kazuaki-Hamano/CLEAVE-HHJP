@@ -1,6 +1,6 @@
 # TM040040-2024-302 組み込み
 
-取り付け作業は[TM040040タッチパッド取り付けガイド](../build-guide/06-TRACKPAD.md)、調整は[DYA Studioガイド](dya-studio.md)を参照してください。この文書では配線とドライバー実装を扱います。
+取り付けと配線の記録は[ハードウェア](../build-guide/customizations/hardware.md)、調整は[DYA Studioガイド](dya-studio.md)を参照してください。この文書では配線とドライバー実装を扱います。
 
 対象はCLEAVE HHJP、左右のXIAO nRF52840 PlusとCirque TM040040です。現行は固定リビジョンのcormoran ZMK／Zephyr 4.1構成で、詳細は[ファームウェア設計](firmware_design.md)に記載します。
 

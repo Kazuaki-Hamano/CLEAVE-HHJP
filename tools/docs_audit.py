@@ -2,7 +2,7 @@ from pathlib import Path
 import re
 from urllib.parse import unquote
 
-docs = [Path('README.md')] + list(Path('docs').glob('*.md')) + list(Path('build-guide').glob('*.md')) + list(Path('tools').rglob('*.md'))
+docs = [Path('README.md')] + list(Path('docs').glob('*.md')) + list(Path('build-guide').rglob('*.md')) + list(Path('tools').rglob('*.md'))
 pattern = re.compile(r'!?\[[^\]]*\]\(([^\s)]+)(?:\s+[^)]*)?\)|(?:src|href)="([^"]+)"')
 bad = []
 total = 0
@@ -42,7 +42,7 @@ for source, tokens in {
     'config/cleave_hhjp.keymap': ['#include <behaviors/runtime_macro.dtsi>', '&lt 1 INT5'],
     'config/boards/shields/cleave_hhjp/cleave_hhjp_right.conf': ['CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_STACK_SIZE=2048', 'CONFIG_ZMK_SLEEP=y'],
     'src/app_update.c': ['K_MSEC(250)', 'K_SECONDS(5)', '<= 20000'],
-    'tools/battery/firmware_update.py': ['drive_timeout=90', 'verify_timeout=60', '0x27000', '0xec000'],
+    'tools/battery/firmware_update.py': ['def validate_firmware(', '0x27000', '0xec000'],
 }.items():
     content = Path(source).read_text(encoding='utf-8')
     for token in tokens:

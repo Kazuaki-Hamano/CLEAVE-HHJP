@@ -20,14 +20,14 @@
   このフォークのキーマップ、実効設定の確認方法、USB残量・充電状態・更新機能をまとめています。
 - [DYA Studioでの設定](docs/dya-studio.md)
   キー配置、Runtime Macro、コンボ、左右のトラックパッド設定、接続先別レイヤーと診断を扱います。
-- [Windowsバッテリーアプリと更新手順](tools/battery/README.md)
+- [ファームウェア検証・診断ツール](tools/battery/README.md)
 - [キー操作によるUF2モード移行](docs/bootloader-keys.md)
 - [タッチパッド設定](tools/battery/trackpad-settings.md)
-- [TM040040タッチパッド取り付けガイド](build-guide/06-TRACKPAD.md)
+- [独自カスタマイズの記録](build-guide/customizations/README.md)
 - [生成物の保存場所](docs/generated-output.md)
 - [ケース設計ツール](tools/case-design/README.md)
 
-このフォークでは左右のタッチパッド（左は縦横スクロール・Fn中の戻る／進む、右はFn中もカーソル移動）、LANG2・旧LANG1位置の長押しFn、DYA Studioでのキー・マクロ・速度・加速・スクロール量設定、左右のバッテリー・充電状態表示、アプリ更新用プロトコルを追加しています。Windowsアプリは残量表示・診断・更新用として残し、トラックパッド設定はDYA Studioを使用します。
+このフォークでは左右のタッチパッド（左は縦横スクロール・Fn中の戻る／進む、右はFn中もカーソル移動）、LANG2・旧LANG1位置の長押しFn、DYA Studioでのキー・マクロ・速度・加速・スクロール量設定、左右のバッテリー・充電状態表示、アプリ更新用プロトコルを追加しています。独自Windowsアプリは廃止しました。キー・マクロ・トラックパッド設定はDYA Studio、UF2更新はキー操作とドライブへのコピーを使用します。
 以下の標準配布元のReleaseが、このフォークの追加機能を含むとは限りません。
 追加機能を使う場合は、このリポジトリのActionsで生成した左右用UF2を使用してください。
 
