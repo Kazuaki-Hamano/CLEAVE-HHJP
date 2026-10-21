@@ -82,16 +82,10 @@ USB接続中の左側はスイッチOFF/ONにより測定電圧と残量が変�
 
 ID3/5は `[ID, version, side, flags, build8, CHHP, chipID8, reserved]`。sideは0=左、1=右、flagsはbit0=更新対応、bit1=USB給電です。子機GATTは先頭16バイトのみで、親機キャッシュのchipIDはゼロです。子機情報は5秒ごとに取得し、切断または20秒超で失効します。
 
-## 8. アプリからのUF2更新
+## 8. UF2検証と手動更新
 
-`CMakeLists.txt` はGit HEADと `src/`、`config/`、`dts/`、`zephyr/`、CMake自身の内容から8桁のビルドIDを生成します。Gitコミットの短縮IDとは異なります。UF2には `CLEAVE_HHJP_UPDATE1|LEFT|<build8>` または `RIGHT` の識別子が入ります。
+独自WindowsアプリとPC側の更新処理は廃止しました。`tools/battery/firmware_update.py`は既存スクリプトとの互換のため名前を維持し、オフラインの`validate_firmware`だけを残しています。UF2 magic、family、payload、ブロックの欠落・重複・連続性、アプリ領域、左右とビルド識別子を確認し、デバイス操作や書き込みはしません。
 
-`src/app_update.c` はUSB要求から250ms後に、左なら `sys_reboot(RST_UF2)`、右なら既存split behaviorコマンドで右側の `bootload` を呼びます。右側は更新対応情報とUSB給電が確認できる場合のみ指示を受け付けます。
+`CMakeLists.txt`が生成する識別子はUF2内の`CLEAVE_HHJP_UPDATE1|LEFT|<build8>`または`RIGHT`へ格納されます。検証ツールは引き続きこの識別子を読み取ります。
 
-`tools/battery/firmware_update.py` はUF2 magic・nRF52840 family・256バイトpayload・欠落/重複・連続アドレス・左右とビルド識別子を検証します。対象は `0x27000` から始まり終端が `0xec000` 以下のアプリ領域です。検証済みデータをメモリに保持して書き込みます。
-既存UF2ドライブがある場合は開始せず、新規ドライブが1台だけであること、XIAO Board-ID、コピー直前のvolume identityを確認します。左右の選択はUF2内の識別子で行い、UF2ドライブ自体に左右識別情報があるとは扱いません。
-
-新規UF2ドライブ待ちは90秒、再起動後のビルド確認は60秒です。ファイルコピーやドライブ消失だけでは確認済み成功にしません。自動モードでは取得可能な対象chipIDも照合します（右側chipIDは取得できません）。
-初回の右更新は旧親機で検証できずpendingになることがあります。同じアプリセッション内で左更新を確認した後、右のビルドを追加で30秒確認します。USBケーブル1本の場合の切り替え手順は[アプリの説明](../tools/battery/README.md)を参照してください。
-
-キー操作による左右のUF2ドライブ表示は確認済みです。アプリによる実機への書き込みと、再起動後の左右ビルド照合は未確認です。
+更新は[キー操作によるUF2モード移行](bootloader-keys.md)後、対象側のUF2をドライブへコピーします。設定変更は[DYA Studio](dya-studio.md)を使用します。旧アプリ向けHID Feature 1～6と`src/app_update.c`は今回変更していません。

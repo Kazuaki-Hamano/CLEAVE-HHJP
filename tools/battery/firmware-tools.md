@@ -16,4 +16,4 @@ python tools/battery/verify_firmware.py output/firmware/9b4ba539
 
 `verify_firmware.py` は取得した UF2 の構造、左側の HID 記述子、
 ビルドログ内の設定を検証し、同じフォルダーに `checksums.json` を保存します。
-バッテリー・充電状態・アプリ更新に対応したビルド向けの確認です。
+残量・充電状態・旧更新プロトコルを含むUF2向けの確認です。独自Windowsアプリは廃止しましたが、HID検証は維持しています。

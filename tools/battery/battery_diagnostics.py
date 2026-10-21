@@ -9,7 +9,7 @@ import time
 if not getattr(sys, 'frozen', False) and sys.prefix == sys.base_prefix:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'output/battery/python-packages'))
 import hid
-from battery_monitor import decode, decode_power
+from hid_reports import decode, decode_power
 
 
 def decode_diagnostics(data):
