@@ -25,8 +25,12 @@ with zipfile.ZipFile(root / 'build-logs.zip') as logs:
         assert 'tapping-term-ms = < 0xc8 >;' in dts
         fn_match = re.search(r'fn_layer\s*\{.*?bindings\s*=\s*<(.*?)>;', dts, re.S)
         fn_bindings = [' '.join(binding.split()) for binding in re.findall(r'&[^&]+', fn_match.group(1))]
-        assert fn_bindings[16] == '&mkp 0x1', fn_bindings[16]
-        assert fn_bindings[18] == '&mkp 0x2', fn_bindings[18]
+        assert fn_bindings[33] == '&mkp 0x1', fn_bindings[33]
+        assert fn_bindings[31] == '&mkp 0x2', fn_bindings[31]
+        assert fn_bindings[32] == '&mkp 0x4', fn_bindings[32]
+        assert fn_bindings[43] == '&boot_hold 0x0 0x7001d', fn_bindings[43]
+        assert fn_bindings[53] == '&boot_hold 0x0 0x70087', fn_bindings[53]
+        assert fn_bindings[41] == '&studio_ble', fn_bindings[41]
         if name == 'left':
             assert not re.search(r'fn_scroll\s*\{', dts), 'Fn must preserve right pointer movement'
             assert not re.search(r'^\s*native-scroll;', dts, re.M)

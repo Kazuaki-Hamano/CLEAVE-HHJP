@@ -64,7 +64,7 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
                 dts = "\n".join(line.split("Z ", 1)[-1] for line in logs.read(dts_entry).decode().splitlines())
                 node = re.search(r"fn_layer\s*\{.*?bindings\s*=\s*<(.*?)>;", dts, re.S)
                 bindings = [" ".join(x.split()) for x in re.findall(r"&[^&]+", node[1])]
-                assert len(bindings) == 70 and bindings[22] == "&studio_ble", bindings[22]
+                assert len(bindings) == 70 and bindings[41] == "&studio_ble", bindings[41]
                 assert 'display-name = "Studio BLE Discovery";' in dts
             print(side, "USB/BLE transport and manual discovery config: PASS")
         if "--host-layers" in sys.argv:

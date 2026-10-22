@@ -33,7 +33,7 @@
 
 [`config/cleave_hhjp.keymap`](../config/cleave_hhjp.keymap) の `default_layer` と `fn_layer` は各70 bindingです。追加用の4レイヤー枠は初期状態では無効です。
 
-左右の専用Fnは `&mo 1`。旧LANG2位置は `&lt 1 INT5`、旧LANG1位置は `&lt 1 INT4`、独立Kanaは `&kp LANG1`。hold-tapは200ms、`tap-preferred`。Fn＋Ctrl＋1～5でBluetoothプロファイル、Fn＋Ctrl＋Backspaceで現在のペアリングを消去します。Fn＋UはDYAのBLE検出、Fn＋B／Nは左右のUF2モード移行です。
+左右の専用Fnは `&mo 1`。旧LANG2位置は `&lt 1 INT5`、旧LANG1位置は `&lt 1 INT4`、独立Kanaは `&kp LANG1`。hold-tapは200ms、`tap-preferred`。Fn＋Ctrl＋1～5でBluetoothプロファイル、Fn＋Ctrl＋Backspaceで現在のペアリングを消去します。Fn＋\|はDYAのBLE検出、Fn＋Z／\_は左右のUF2モード移行です。
 
 70位置のtransform、物理レイアウトとkscanは `cleave_hhjp.dtsi`、行列GPIOは左右overlayに定義します。右側は `col-offset=7`。右側1～4段目の表示には実物と同じ段ずれを付けています。DYAに保存したキー配置はコンパイル時の初期配置より優先されます。
 
@@ -41,7 +41,7 @@ Runtime Macroは `<behaviors/runtime_macro.dtsi>` から `&rmacro <slot>` を公
 
 ## トラックパッド
 
-左右のCirque TM040040は追加GPIOへSPI接続します。右側の入力は `trackpad_split` からBLEで左側へ、左側の入力はローカルlistenerへ送ります。右はFn中もカーソル、左は縦横スクロールとFn中の戻る／進む。Fn＋Q／Eは左右クリックです。
+左右のCirque TM040040は追加GPIOへSPI接続します。右側の入力は `trackpad_split` からBLEで左側へ、左側の入力はローカルlistenerへ送ります。右はFn中もカーソル、左は縦横スクロールとFn中の戻る／進む。Fn＋F／Sは左右クリックです。
 
 速度、加速、最大倍率、左右それぞれのスクロール量はDYAのカスタム設定へ移行しました。旧USB Feature 7の設定version 3は廃止し、Windowsアプリからは変更しません。パッド別の速度・端数状態を保持し、左スクロールが右カーソルの加速に影響しないようにしています。
 
