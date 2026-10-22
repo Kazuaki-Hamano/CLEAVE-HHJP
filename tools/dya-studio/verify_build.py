@@ -38,6 +38,11 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
     for side in ("left", "right"):
         config_entry = next(n for n in logs.namelist() if side in n and "Kconfig file" in n)
         config = logs.read(config_entry).decode()
+        # Kconfig dumps contain settings; CMake messages and compiled object names
+        # are in the separate West Build step log.
+        build_entry = next(n for n in logs.namelist()
+                           if side in n and "/" in n and "West Build (" in n)
+        config += "\n" + logs.read(build_entry).decode()
         for setting in common + (central if side == "left" else ()):
             assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
         assert not re.search(r"(?m) CONFIG_INPUT_PINNACLE=y$", config), "Upstream driver must not replace CLEAVE driver"
