@@ -94,7 +94,7 @@ static bool initialized = false;
  * Sleep must turn the LED off synchronously before device suspend/poweroff. */
 static atomic_t sleeping;
 K_MUTEX_DEFINE(led_output_lock);
-BUILD_ASSERT(!SHOW_LAYER_COLORS, "CLEAVE awake battery color replaces layer colors");
+BUILD_ASSERT(!(SHOW_LAYER_COLORS), "CLEAVE awake battery color replaces layer colors");
 
 // track current color for persistent indicators (layer color)
 uint8_t led_current_color = 0;

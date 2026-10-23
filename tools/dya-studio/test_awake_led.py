@@ -33,7 +33,9 @@ stub = r"""
 #define CONFIG_RGBLED_WIDGET_BATTERY_COLOR_MISSING 5
 #define CONFIG_RGBLED_WIDGET_BATTERY_BLINK_MS 2000
 #define CONFIG_RGBLED_WIDGET_INTERVAL_MS 500
-#define SHOW_LAYER_COLORS 0
+#define CONFIG_RGBLED_WIDGET_SHOW_LAYER_COLORS 0
+#define CONFIG_ZMK_SPLIT 1
+#define SHOW_LAYER_COLORS (IS_ENABLED(CONFIG_RGBLED_WIDGET_SHOW_LAYER_COLORS)) && (!IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL))
 #define LOG_INF(...)
 #define LOG_BATTERY(...)
 #define BUILD_ASSERT(c,...) _Static_assert(c, "build assertion")
@@ -111,4 +113,5 @@ int main(void) {
  puts("Awake/idle color, thresholds, battery updates, blink restore, sleep races, wake and full queue: PASS");
 }
 """
-subprocess.run(["wsl", "--", "bash", "-lc", "gcc -std=c11 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-variable -Wno-misleading-indentation -x c -o /tmp/cleave-awake-led - && /tmp/cleave-awake-led"], input=(stub+production+test).encode(), check=True)
+for central in (0, 1):
+    subprocess.run(["wsl", "--", "bash", "-lc", f"gcc -DCONFIG_ZMK_SPLIT_ROLE_CENTRAL={central} -std=c11 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-variable -Wno-misleading-indentation -x c -o /tmp/cleave-awake-led - && /tmp/cleave-awake-led"], input=(stub+production+test).encode(), check=True)
