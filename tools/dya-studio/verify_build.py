@@ -59,6 +59,18 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
             objects = re.findall(r"Building C object [^\n]*gatt_rpc_transport[.]c[.]obj", config)
             assert len(objects) == (1 if side == "left" else 0), (side, "duplicate or missing GATT object", objects)
             print(side, "single role-correct patched GATT transport: PASS")
+        if "--awake-led" in sys.argv:
+            assert "CLEAVE awake battery LED override:" in config, (side, "missing LED override")
+            objects = re.findall(r"Building C object [^\n]*status_led/widget[.]c[.]obj", config)
+            assert len(objects) == 1, (side, "missing/duplicate awake LED renderer", objects)
+            assert not re.search(r"Building C object [^\n]*zmk-rgbled-widget/src/widget[.]c[.]obj", config)
+            for setting in ("CONFIG_RGBLED_WIDGET=y", "CONFIG_RGBLED_WIDGET_BATTERY_LEVEL_HIGH=80",
+                            "CONFIG_RGBLED_WIDGET_BATTERY_LEVEL_LOW=20",
+                            "CONFIG_RGBLED_WIDGET_BATTERY_COLOR_HIGH=2",
+                            "CONFIG_RGBLED_WIDGET_BATTERY_COLOR_MEDIUM=3",
+                            "CONFIG_RGBLED_WIDGET_BATTERY_COLOR_LOW=1"):
+                assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
+            print(side, "single awake LED renderer and startup battery thresholds: PASS")
         if "--ble-discovery" in sys.argv:
             for setting in ("CONFIG_ZMK_STUDIO_TRANSPORT_BLE=y", "CONFIG_ZMK_STUDIO_TRANSPORT_UART=y"):
                 assert bool(re.search(r"(?m) " + re.escape(setting) + r"$", config)) == (side == "left"), (side, setting)

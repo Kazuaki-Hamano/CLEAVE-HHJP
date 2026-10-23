@@ -89,3 +89,9 @@ ID3/5は `[ID, version, side, flags, build8, CHHP, chipID8, reserved]`。sideは
 `CMakeLists.txt`が生成する識別子はUF2内の`CLEAVE_HHJP_UPDATE1|LEFT|<build8>`または`RIGHT`へ格納されます。検証ツールは引き続きこの識別子を読み取ります。
 
 更新は[キー操作によるUF2モード移行](bootloader-keys.md)後、対象側のUF2をドライブへコピーします。設定変更は[DYA Studio](dya-studio.md)を使用します。旧アプリ向けHID Feature 1～6と`src/app_update.c`は今回変更していません。
+
+## 起床状態のLED表示
+
+左右のRGB LEDはACTIVE・IDLE中、自分側の残量の色で点灯します。80%以上は緑、20〜79%は黄、20%未満は赤。起動時と同じ関数を使い、未取得／0%時のマゼンタも維持します。既存の通知表示後は残量の色へ戻り、SLEEPでは即時消灯します。追加のADC測定・周期タイマー・PWM調光はありません。
+
+固定LEDモジュールの `src/widget.c` だけをCMakeの遅延処理で `src/status_led/widget.c` に置換します。左右それぞれで元の翻訳単位が1個であることを要求し、settings_resetには適用しません。通知中のスリープに備え、GPIO書き込みの排他と消灯ゲートを設けています。[出典・変更点](../src/status_led/UPSTREAM.md)、[利用記録](../build-guide/customizations/system.md)を参照してください。実機の点灯・消灯と電池持ちは別途確認が必要です。
