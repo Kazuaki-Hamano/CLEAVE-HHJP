@@ -25,7 +25,7 @@ struct zmk_led_config {
 };
 ZMK_EVENT_DECLARE(zmk_led_config);
 ZMK_EVENT_IMPL(zmk_led_config);
-ZMK_RELAY_EVENT_HANDLE(zmk_led_config, lcfg, source);
+ZMK_RELAY_EVENT_HANDLE(zmk_led_config, lc, source);
 
 static atomic_t brightness = 100;
 uint8_t cleave_led_brightness_get(void) { return atomic_get(&brightness); }

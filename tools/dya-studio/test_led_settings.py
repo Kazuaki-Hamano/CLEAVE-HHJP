@@ -14,7 +14,7 @@ stub=r"""
 #define ARG_UNUSED(x) (void)(x)
 #define ZMK_EVENT_DECLARE(n) static const struct n *as_##n(const void *); static int raise_##n(struct n)
 #define ZMK_EVENT_IMPL(...)
-#define ZMK_RELAY_EVENT_HANDLE(...)
+#define ZMK_RELAY_EVENT_HANDLE(type,id,field) _Static_assert(sizeof(#id)<=4,"relay event identifier limit")
 #define ZMK_LISTENER(...)
 #define ZMK_SUBSCRIPTION(...)
 #define ZMK_RPC_CUSTOM_SUBSYSTEM(...)
