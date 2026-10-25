@@ -1,6 +1,17 @@
-"""Exercise production brightness settings and split sync for both roles."""
+"""Exercise brightness settings through pinned production relay macros for both roles."""
 from pathlib import Path
 import re,subprocess
+upstream=Path("tools/dya-studio/fixtures/event_manager.upstream.h").read_text()
+def macro(name, start=0):
+    pos=upstream.index("#define " + name + "(", start)
+    lines=upstream[pos:].splitlines()
+    out=[]
+    for line in lines:
+        out.append(line)
+        if not line.endswith("\\"):break
+    return "\n".join(out)+"\n"
+relay=macro("__ZMK_RELAY_ASSERT_NAME")+macro("__ZMK_RELAY_ASSERT_SIZE")+macro("ZMK_RELAY_EVENT_HANDLE")
+relay+="#if CONFIG_ZMK_SPLIT_ROLE_CENTRAL\n"+macro("ZMK_RELAY_EVENT_CENTRAL_TO_PERIPHERAL")+"\n#define ZMK_RELAY_EVENT_PERIPHERAL_TO_CENTRAL(...)\n#else\n#define ZMK_RELAY_EVENT_CENTRAL_TO_PERIPHERAL(...)\n"+macro("ZMK_RELAY_EVENT_PERIPHERAL_TO_CENTRAL",upstream.index("#else // peripheral"))+"\n#endif\n"
 source=re.sub(r"^#include.*$", "", Path("src/status_led/brightness.c").read_text(), flags=re.M)
 stub=r"""
 #include <assert.h>
@@ -12,12 +23,20 @@ stub=r"""
 #include <errno.h>
 #define IS_ENABLED(x) (x)
 #define LOG_MODULE_DECLARE(...)
+#define LOG_WRN(...)
+#define CONFIG_ZMK_SPLIT_RELAY_EVENT_TYPE_NAME_LEN 4
+#define CONFIG_ZMK_SPLIT_RELAY_EVENT_DATA_LEN 240
+#define STRINGIFY(x) #x
+#define IS_EMPTY(x) 0
+#define UNPAREN(...) __VA_ARGS__
+#define COND_CODE_1(flag,a,b) UNPAREN b
 #define ARG_UNUSED(x) (void)(x)
-#define ZMK_EVENT_DECLARE(n) static const struct n *as_##n(const void *); static int raise_##n(struct n)
+#define ZMK_EVENT_DECLARE(n) static struct n *as_##n(const void *); static int raise_##n(struct n)
 #define ZMK_EVENT_IMPL(...)
-#define ZMK_RELAY_EVENT_HANDLE(type,id,field) _Static_assert(sizeof(#id)<=4,"relay event identifier limit")
-#define ZMK_LISTENER(...)
-#define ZMK_SUBSCRIPTION(...)
+struct listener {int (*callback)(const void *);};
+struct subscription {const char *type;const struct listener *listener;};
+#define ZMK_LISTENER(mod,cb) static const struct listener listener_##mod={cb}
+#define ZMK_SUBSCRIPTION(mod,event) static const struct subscription subscription_##mod##_##event={#event,&listener_##mod}
 #define ZMK_RPC_CUSTOM_SUBSYSTEM(...)
 #define ZMK_RPC_CUSTOM_SUBSYSTEM_UI_URLS() .ui=0
 #define ZMK_STUDIO_RPC_HANDLER_UNSECURED 0
@@ -26,6 +45,7 @@ stub=r"""
 #define SETTINGS_MAX_NAME_LEN 64
 #define SETTINGS_STATIC_HANDLER_DEFINE(...)
 #define ZMK_EV_EVENT_BUBBLE 0
+#define ZMK_EV_EVENT_HANDLED 1
 #define ZMK_RELAY_EVENT_SOURCE_SELF 255
 #define K_FOREVER 0
 #define K_MSEC(n) (n)
@@ -47,6 +67,14 @@ static bool cleave_split_peripheral_connected(void){return connected;}
 static bool zmk_split_bt_peripheral_is_connected(void){return connected;}
 typedef int (*settings_read_cb)(void *,void *,size_t);
 static int settings_save_one(const char *key,const void *p,size_t len){assert(!strcmp(key,"cleave_led/saved"));assert(len==4);writes++;if(flash_error)return -EIO;memcpy(&disk,p,4);return 0;}
+struct zmk_split_relay_event_payload {struct {unsigned event_data_size,event_type_size;} header;char event_type[4];uint8_t event_data[240];};
+#define ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RELAY_EVENT 1
+struct zmk_split_transport_peripheral_event {int type;union {struct zmk_split_relay_event_payload relay_event;} data;};
+struct zmk_relay_event_received {uint8_t source;const char *event_name;const uint8_t *event_data;size_t event_data_size;};
+static bool incoming_relay;
+static struct zmk_relay_event_received *as_zmk_relay_event_received(const void *e){return incoming_relay?(void*)e:NULL;}
+static int zmk_split_central_send_relay_event(struct zmk_split_relay_event_payload *p);
+static int zmk_split_peripheral_report_event(struct zmk_split_transport_peripheral_event *p);
 typedef void zmk_event_t;typedef int zmk_custom_CallRequest;typedef int pb_callback_t;
 struct zmk_rpc_custom_subsystem_meta{int ui,security;};
 struct zmk_custom_setting{int unused;};
@@ -61,9 +89,27 @@ static int zmk_custom_setting_read(const struct zmk_custom_setting *s,struct zmk
 """
 test=r"""
 static struct zmk_led_config sent;static int sends;
-static const struct zmk_led_config *as_zmk_led_config(const void *e){return e;}
-static int raise_zmk_led_config(struct zmk_led_config e){sent=e;sends++;return 0;}
-static void receive(int kind,int source,int seq,int live,int saved){struct zmk_led_config e={seq,live,saved,kind,source};led_config_event(&e);}
+static struct zmk_led_config *as_zmk_led_config(const void *e){return incoming_relay?NULL:(void*)e;}
+static int record_wire(struct zmk_split_relay_event_payload *p){
+ assert(!strcmp(p->event_type,"lc"));assert(p->header.event_data_size==sizeof(sent));
+ memcpy(&sent,p->event_data,sizeof(sent));sends++;return 0;
+}
+static int zmk_split_central_send_relay_event(struct zmk_split_relay_event_payload *p){return record_wire(p);}
+static int zmk_split_peripheral_report_event(struct zmk_split_transport_peripheral_event *p){return record_wire(&p->data.relay_event);}
+static int raise_zmk_led_config(struct zmk_led_config e){
+ bool previous=incoming_relay;incoming_relay=false;
+ /* Dispatch through the actual generated sender subscription, not a fake send. */
+ assert(!strcmp(subscription_zmk_led_config_relay_zmk_led_config.type,"zmk_led_config"));
+ subscription_zmk_led_config_relay_zmk_led_config.listener->callback(&e);
+ led_config_event(&e);incoming_relay=previous;return 0;
+}
+static void receive(int kind,int source,int seq,int live,int saved){
+ struct zmk_led_config e={seq,live,saved,kind,255};
+ struct zmk_relay_event_received wire={(uint8_t)(source-1),"lc",(const void*)&e,sizeof(e)};
+ incoming_relay=true;int before=sends;
+ subscription_zmk_led_config_relay_handle_zmk_relay_event_received.listener->callback(&wire);
+ incoming_relay=false;assert(sends==before); /* relayed input must not echo */
+}
 #if CONFIG_ZMK_SPLIT_ROLE_CENTRAL
 static void edit(int value,int kind){event_kind=2;registry_value=value;struct zmk_custom_setting_changed e={&awake_brightness,kind};led_registry_event(&e);}
 int main(void){
@@ -104,4 +150,4 @@ int main(void){
 #endif
 """
 for role in (0,1):
- subprocess.run(["wsl","--","bash","-lc",f"gcc -DCONFIG_ZMK_SPLIT_ROLE_CENTRAL={role} -std=c11 -Wall -Wextra -Werror -Wno-unused-function -Wno-unused-variable -Wno-unused-parameter -x c -o /tmp/cleave-led-settings - && /tmp/cleave-led-settings"],input=(stub+source+test).encode(),check=True)
+ subprocess.run(["wsl","--","bash","-lc",f"gcc -DCONFIG_ZMK_SPLIT_ROLE_CENTRAL={role} -std=c11 -Wall -Wextra -Werror -Wno-unused-function -Wno-unused-variable -Wno-unused-parameter -x c -o /tmp/cleave-led-settings - && /tmp/cleave-led-settings"],input=(stub+relay+source+test).encode(),check=True)

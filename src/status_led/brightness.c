@@ -29,6 +29,9 @@ struct zmk_led_config {
 ZMK_EVENT_DECLARE(zmk_led_config);
 ZMK_EVENT_IMPL(zmk_led_config);
 ZMK_RELAY_EVENT_HANDLE(zmk_led_config, lc, source);
+/* HANDLE only reconstructs incoming events. Each role also needs its sender. */
+ZMK_RELAY_EVENT_CENTRAL_TO_PERIPHERAL(zmk_led_config, lc, source);
+ZMK_RELAY_EVENT_PERIPHERAL_TO_CENTRAL(zmk_led_config, lc, source);
 
 static atomic_t brightness = 100;
 uint8_t cleave_led_brightness_get(void) { return atomic_get(&brightness); }
