@@ -28,7 +28,10 @@ The upstream zero-percent/unknown convention (magenta) is preserved; measured
 80% and above is green, 20-79% yellow, and below 20% red. Battery estimates while
 USB-powered/charging retain their existing measurement limitations.
 
-`tools/dya-studio/test_led_settings.py` exercises registry and split synchronization.
+`tools/dya-studio/test_led_settings.py` exercises registry and split synchronization
+through the pinned relay macros and BLE receive callback. In the pinned transport,
+central-to-peripheral raw source 0 becomes application source 1 after HANDLE;
+the peripheral must accept that value rather than the macro comment's source-0 convention.
 `tools/dya-studio/test_awake_led.py` compiles production renderer/state functions
 with deterministic GPIO, queue and activity mocks, including sleep during a
 blink and a saturated queue. Hardware behavior and battery life need evaluation

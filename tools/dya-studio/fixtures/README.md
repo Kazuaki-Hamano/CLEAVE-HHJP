@@ -15,3 +15,10 @@ fixture makes the test independent of disposable research checkouts in output/.
 `app/include/zmk/event_manager.h` (MIT header retained).
 Used to compile the real relay sender/receiver macros in LED synchronization
 tests, rather than mocking away the transport registration.
+
+`split_bluetooth_service.upstream.c`: cormoran/zmk at
+`e5c9b6915b56801193e359dd9bad4a167ce0d1b8`,
+`app/src/split/bluetooth/service.c` (MIT header retained).
+LED tests execute its central-to-peripheral receive callback: the transport
+sets source 0, then the event HANDLE macro increments it to 1. Do not derive
+raw source from the expected application source in the test harness.

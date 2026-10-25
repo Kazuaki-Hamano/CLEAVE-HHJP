@@ -1,6 +1,8 @@
 """Exercise brightness settings through pinned production relay macros for both roles."""
 from pathlib import Path
 import re,subprocess
+transport=Path("tools/dya-studio/fixtures/split_bluetooth_service.upstream.c").read_text()
+receive_callback=re.search(r"static void split_svc_relay_event_from_central_callback\(struct k_work \*work\) \{.*?^\}", transport, re.S|re.M).group()
 upstream=Path("tools/dya-studio/fixtures/event_manager.upstream.h").read_text()
 def macro(name, start=0):
     pos=upstream.index("#define " + name + "(", start)
@@ -103,27 +105,46 @@ static int raise_zmk_led_config(struct zmk_led_config e){
  subscription_zmk_led_config_relay_zmk_led_config.listener->callback(&e);
  led_config_event(&e);incoming_relay=previous;return 0;
 }
-static void receive(int kind,int source,int seq,int live,int saved){
- struct zmk_led_config e={seq,live,saved,kind,255};
- struct zmk_relay_event_received wire={(uint8_t)(source-1),"lc",(const void*)&e,sizeof(e)};
+static struct zmk_split_relay_event_payload relay_event_from_central_msgq;
+static bool queued;
+static int k_msgq_get(struct zmk_split_relay_event_payload *q,void *p,int timeout){
+ if(!queued)return -EAGAIN;
+ memcpy(p,q,sizeof(*q));queued=false;return 0;
+}
+#define K_NO_WAIT 0
+static int raise_zmk_relay_event_received(struct zmk_relay_event_received wire){
  incoming_relay=true;int before=sends;
  subscription_zmk_led_config_relay_handle_zmk_relay_event_received.listener->callback(&wire);
- incoming_relay=false;assert(sends==before); /* relayed input must not echo */
+ incoming_relay=false;assert(sends==before);return 0;
+}
+__RECEIVE_CALLBACK__
+static void receive(int kind,int seq,int live,int saved){
+ struct zmk_led_config e={seq,live,saved,kind,255};
+#if CONFIG_ZMK_SPLIT_ROLE_CENTRAL
+ /* First peripheral slot is raw source 0 in app/src/split/central.c. */
+ raise_zmk_relay_event_received((struct zmk_relay_event_received){0,"lc",(const void*)&e,sizeof(e)});
+#else
+ /* Execute the pinned BLE receiver, including its real raw source value. */
+ relay_event_from_central_msgq.header.event_data_size=sizeof(e);
+ strcpy(relay_event_from_central_msgq.event_type,"lc");
+ memcpy(relay_event_from_central_msgq.event_data,&e,sizeof(e));queued=true;
+ split_svc_relay_event_from_central_callback(NULL);assert(!queued);
+#endif
 }
 #if CONFIG_ZMK_SPLIT_ROLE_CENTRAL
 static void edit(int value,int kind){event_kind=2;registry_value=value;struct zmk_custom_setting_changed e={&awake_brightness,kind};led_registry_event(&e);}
 int main(void){
  registry_value=40;event_kind=1;led_registry_event((void*)1);assert(cleave_led_brightness_get()==40 && state.saved==40);
  led_sync_work(NULL);assert(sent.kind==LED_UPDATE && sent.saved==40 && sent.live==40);
- receive(LED_ACK,1,sent.sequence,sent.live,sent.saved);assert(!pending);
+ receive(LED_ACK,sent.sequence,sent.live,sent.saved);assert(!pending);
  edit(10,ZMK_CUSTOM_SETTING_CHANGED_VALUE_UPDATED);assert(state.live==10 && state.saved==40);
  led_sync_work(NULL);assert(sent.live==10 && sent.saved==40 && writes==0);
  unsigned old=sent.sequence;edit(20,ZMK_CUSTOM_SETTING_CHANGED_VALUE_UPDATED);
- receive(LED_ACK,1,old,10,40);assert(pending); /* stale ACK cannot drop a newer edit */
+ receive(LED_ACK,old,10,40);assert(pending); /* stale ACK cannot drop a newer edit */
  edit(20,ZMK_CUSTOM_SETTING_CHANGED_SAVED);assert(state.saved==20);
  connected=false;int count=sends;led_sync_work(NULL);assert(sends==count && pending && last_delay==5000);
- connected=true;led_sync_work(NULL);receive(LED_ACK,1,sent.sequence,sent.live,sent.saved);assert(!pending);
- receive(LED_REQUEST,1,0,0,0);assert(pending);led_sync_work(NULL);assert(sent.saved==20);
+ connected=true;led_sync_work(NULL);receive(LED_ACK,sent.sequence,sent.live,sent.saved);assert(!pending);
+ receive(LED_REQUEST,0,0,0);assert(pending);led_sync_work(NULL);assert(sent.saved==20);
  edit(100,ZMK_CUSTOM_SETTING_CHANGED_RESET);assert(state.saved==100 && state.live==100);
  edit(0,ZMK_CUSTOM_SETTING_CHANGED_VALUE_UPDATED);assert(cleave_led_brightness_get()==0 && state.saved==100);
  edit(100,ZMK_CUSTOM_SETTING_CHANGED_DISCARDED);assert(cleave_led_brightness_get()==100);
@@ -135,19 +156,20 @@ static int load_cb(void *arg,void *p,size_t len){memcpy(p,&disk,len);return len;
 int main(void){
  disk=40;assert(led_load("saved",4,load_cb,NULL)==0);led_peripheral_init(NULL);assert(cleave_led_brightness_get()==40);
  led_sync_work(NULL);assert(sent.kind==LED_REQUEST);
- receive(LED_UPDATE,0,1,10,40);led_sync_work(NULL);assert(cleave_led_brightness_get()==10 && writes==0 && !pending && sent.kind==LED_ACK);
- receive(LED_UPDATE,0,2,20,20);flash_error=1;led_sync_work(NULL);assert(pending && cleave_led_brightness_get()==20 && stored_brightness==40);
+ receive(LED_UPDATE,1,10,40);led_sync_work(NULL);assert(cleave_led_brightness_get()==10 && writes==0 && !pending && sent.kind==LED_ACK);
+ receive(LED_UPDATE,2,20,20);flash_error=1;led_sync_work(NULL);assert(pending && cleave_led_brightness_get()==20 && stored_brightness==40);
  flash_error=0;led_sync_work(NULL);assert(!pending && stored_brightness==20 && disk==20 && sent.sequence==2);
- int count=writes;receive(LED_UPDATE,0,2,20,20);led_sync_work(NULL);assert(writes==count); /* idempotent retry */
- receive(LED_UPDATE,0,3,101,30);assert(!pending && cleave_led_brightness_get()==20);
+ int count=writes;receive(LED_UPDATE,2,20,20);led_sync_work(NULL);assert(writes==count); /* idempotent retry */
+ receive(LED_UPDATE,3,101,30);assert(!pending && cleave_led_brightness_get()==20);
  led_connection_event(NULL);led_sync_work(NULL);assert(sent.kind==LED_REQUEST);
  /* Reboot restores saved value, not a live preview. */
- receive(LED_UPDATE,0,4,0,20);led_sync_work(NULL);assert(cleave_led_brightness_get()==0 && disk==20);
+ receive(LED_UPDATE,4,0,20);led_sync_work(NULL);assert(cleave_led_brightness_get()==0 && disk==20);
  stored_brightness=100;assert(led_load("saved",4,load_cb,NULL)==0);led_peripheral_init(NULL);assert(cleave_led_brightness_get()==20);
  disk=101;assert(led_load("saved",4,load_cb,NULL)==-EINVAL);
  puts("LED right: saved boot value, preview without flash, save failures/retry, reconnect, zero and validation: PASS");
 }
 #endif
 """
+test=test.replace("__RECEIVE_CALLBACK__",receive_callback)
 for role in (0,1):
  subprocess.run(["wsl","--","bash","-lc",f"gcc -DCONFIG_ZMK_SPLIT_ROLE_CENTRAL={role} -std=c11 -Wall -Wextra -Werror -Wno-unused-function -Wno-unused-variable -Wno-unused-parameter -x c -o /tmp/cleave-led-settings - && /tmp/cleave-led-settings"],input=(stub+relay+source+test).encode(),check=True)

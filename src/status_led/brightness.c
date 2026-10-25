@@ -147,7 +147,8 @@ static int led_config_event(const zmk_event_t *event) {
         }
     }
 #else
-    if (ready && ev->source == 0 && ev->kind == LED_UPDATE && valid_pair(ev)) {
+    /* The pinned BLE receiver sets raw source 0; HANDLE increments it to 1. */
+    if (ready && ev->source == 1 && ev->kind == LED_UPDATE && valid_pair(ev)) {
         state = *ev;
         pending = true;
         schedule_led_sync(0);
