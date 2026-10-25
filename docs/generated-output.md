@@ -4,8 +4,9 @@
 
 | 場所 | 内容 |
 |---|---|
-| `output/firmware/9b4ba539/` | 現行の実機確認済みDYA対応UF2。Runtime Macro割り当てを含む。埋込ビルドID `e377a35a` |
-| `output/firmware/025d2c68/` | 戻し用の直前のmain由来UF2。埋込ビルドID `d76ea2d0`。Runtime Macro割り当て追加前 |
+| `output/firmware/648c54f4/` | 現行のDYA対応UF2。LEDのPWM調光・左右同期を含み、左右の明るさ変更と保存を実機確認済み。埋込ビルドID `c94fa28a` |
+| `output/firmware/9b4ba539/` | 過去の実機確認済みDYA対応UF2。Runtime Macro割り当てを含む。埋込ビルドID `e377a35a` |
+| `output/firmware/025d2c68/` | 過去のmain由来UF2。埋込ビルドID `d76ea2d0`。Runtime Macro割り当て追加前 |
 | `output/battery/build-env/` | hidapi依存の診断・検証用Python環境。EXE作成は廃止 |
 | `output/battery/` のログ・補助依存 | 既存の測定記録・検証補助。アプリの配布・ビルド成果物は削除済み |
 | `output/case-design/`、`output/imagegen/` | ケース・画像の設計素材と生成物。保持 |
@@ -13,7 +14,7 @@
 | `output/dya-local-web-archive.zip` | 不要になったローカルDYA試験配布物の復元用ZIP |
 | `output/cleanup-dya-20261020.json` | 今回の整理対象と結果 |
 
-現行UF2は [Actions Run 39358929004](https://github.com/Kazuaki-Hamano/CLEAVE-HHJP/actions/runs/39358929004) で生成しました。左右UF2、settings_reset、左右の完全なビルドログ、チェックサム、検証結果を同じフォルダに保持します。`settings_reset` は通常の更新には使いません。
+現行UF2は [Actions Run 40158279533](https://github.com/Kazuaki-Hamano/CLEAVE-HHJP/actions/runs/40158279533) で生成しました。左右UF2、settings_reset、左右の完全なビルドログ、チェックサム、検証結果を同じフォルダに保持します。`settings_reset` は通常の更新には使いません。
 
 2026年10月20日にDYA試験用チェックアウト、重複UF2、古いDYA成果物を整理しました。ごみ箱へ移したものは空にするまでディスク容量を消費します。ローカルWeb配布物は、復元用ZIPを検証し、ログを使用していた試験サーバーを停止した後でごみ箱へ移しました。試験中に使ったlocalhost:8766のページは今後使用しません。
 

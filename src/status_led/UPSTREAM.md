@@ -34,5 +34,7 @@ central-to-peripheral raw source 0 becomes application source 1 after HANDLE;
 the peripheral must accept that value rather than the macro comment's source-0 convention.
 `tools/dya-studio/test_awake_led.py` compiles production renderer/state functions
 with deterministic GPIO, queue and activity mocks, including sleep during a
-blink and a saturated queue. Hardware behavior and battery life need evaluation
-after flashing; the C harness does not measure current consumption.
+blink and a saturated queue. On 2026-10-25, the user confirmed brightness changes
+on both halves and saving with firmware 648c54f4 (embedded ID c94fa28a).
+Reboot restoration and reconnect synchronization remain automated-test evidence;
+battery consumption has not been measured. The C harness does not measure current.
