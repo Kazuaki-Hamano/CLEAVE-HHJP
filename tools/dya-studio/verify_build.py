@@ -80,12 +80,13 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
             for label, status in (("pwm0", "disabled"), ("pwm1", "okay")):
                 node = re.search(label + r": pwm@[^\s]+\s*\{(.*?)\};", led_dts, re.S)
                 assert node and f'status = "{status}";' in node[1], (side, label)
-            assert re.search(r'\n\s*leds\s*\{[^}]*status = "disabled";', led_dts)
+            assert not re.search(r"(?m) CONFIG_LED_GPIO=y$", config), (side, "GPIO LED driver conflicts with PWM")
+            assert not re.search(r"Building C object [^\n]*led_gpio[.]c[.]obj", config), (side, "GPIO LED driver compiled")
             assert re.search(r'\n\s*pwmleds\s*\{[^}]*status = "disabled";', led_dts)
             for channel, color in enumerate(("red", "green", "blue")):
                 node = re.search(r"status_" + color + r": " + color + r"\s*\{(.*?)\};", led_dts, re.S)
                 assert node and re.search(r"pwms = < &pwm1 0x" + str(channel) + r" 0xf4240 0x1 >;", node[1]), (side, color)
-            pins = re.search(r"status_pwm_default:.*?psels = <(.*?)>;", led_dts, re.S)
+            pins = re.search(r"status_pwm_default:.*?psels = (.*?);", led_dts, re.S)
             assert pins and [int(x, 16) & 0x1ff for x in re.findall(r"0x[0-9a-f]+", pins[1])] == [26, 30, 6]
             print(side, "PWM1 RGB channels, 1kHz, polarity and CHG/GPIO isolation: PASS")
         if "--ble-discovery" in sys.argv:

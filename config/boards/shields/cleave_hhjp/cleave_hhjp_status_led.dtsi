@@ -4,7 +4,7 @@
 /* Do not use the sample PWM0 on P0.17: that is the CHG input. */
 &pwm0 { status = "disabled"; };
 &{/pwmleds} { status = "disabled"; };
-&{/leds} { status = "disabled"; };
+/* rgbled_adapter retains /leds aliases; CONFIG_LED_GPIO=n prevents GPIO ownership. */
 
 &pinctrl {
     status_pwm_default: status_pwm_default {
