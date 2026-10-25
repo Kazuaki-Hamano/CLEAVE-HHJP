@@ -11,6 +11,7 @@ stub=r"""
 #include <string.h>
 #include <errno.h>
 #define IS_ENABLED(x) (x)
+#define LOG_MODULE_DECLARE(...)
 #define ARG_UNUSED(x) (void)(x)
 #define ZMK_EVENT_DECLARE(n) static const struct n *as_##n(const void *); static int raise_##n(struct n)
 #define ZMK_EVENT_IMPL(...)

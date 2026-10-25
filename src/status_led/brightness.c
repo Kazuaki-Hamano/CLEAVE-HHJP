@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/atomic.h>
 #include <zmk/event_manager.h>
@@ -14,6 +15,8 @@
 #include <zmk/studio/custom.h>
 #include <cleave_split_status.h>
 #endif
+
+LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 /* Live and saved values travel together. Preview never writes peripheral flash;
  * reconnect/boot always reasserts the central's authoritative saved value.
