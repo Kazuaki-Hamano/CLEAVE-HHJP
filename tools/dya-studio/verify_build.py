@@ -71,6 +71,23 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
                             "CONFIG_RGBLED_WIDGET_BATTERY_COLOR_LOW=1"):
                 assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
             print(side, "single awake LED renderer and startup battery thresholds: PASS")
+        if "--pwm-led" in sys.argv:
+            for setting in ("CONFIG_PWM=y", "CONFIG_LED_PWM=y"):
+                assert re.search(r"(?m) " + re.escape(setting) + r"$", config), (side, setting)
+            assert len(re.findall(r"Building C object [^\n]*status_led/brightness[.]c[.]obj", config)) == 1
+            entry = next(n for n in logs.namelist() if side in n and "Devicetree file" in n)
+            led_dts = "\n".join(line.split("Z ", 1)[-1] for line in logs.read(entry).decode().splitlines())
+            for label, status in (("pwm0", "disabled"), ("pwm1", "okay")):
+                node = re.search(label + r": pwm@[^\s]+\s*\{(.*?)\};", led_dts, re.S)
+                assert node and f'status = "{status}";' in node[1], (side, label)
+            assert re.search(r'\n\s*leds\s*\{[^}]*status = "disabled";', led_dts)
+            assert re.search(r'\n\s*pwmleds\s*\{[^}]*status = "disabled";', led_dts)
+            for channel, color in enumerate(("red", "green", "blue")):
+                node = re.search(r"status_" + color + r": " + color + r"\s*\{(.*?)\};", led_dts, re.S)
+                assert node and re.search(r"pwms = < &pwm1 0x" + str(channel) + r" 0xf4240 0x1 >;", node[1]), (side, color)
+            pins = re.search(r"status_pwm_default:.*?psels = <(.*?)>;", led_dts, re.S)
+            assert pins and [int(x, 16) & 0x1ff for x in re.findall(r"0x[0-9a-f]+", pins[1])] == [26, 30, 6]
+            print(side, "PWM1 RGB channels, 1kHz, polarity and CHG/GPIO isolation: PASS")
         if "--ble-discovery" in sys.argv:
             for setting in ("CONFIG_ZMK_STUDIO_TRANSPORT_BLE=y", "CONFIG_ZMK_STUDIO_TRANSPORT_UART=y"):
                 assert bool(re.search(r"(?m) " + re.escape(setting) + r"$", config)) == (side == "left"), (side, setting)
@@ -208,6 +225,9 @@ with zipfile.ZipFile(root / "build-logs.zip") as logs:
                 assert "CONFIG_ZMK_BEHAVIOR_METADATA=y" in config
                 assert b"Runtime Macro\0" in payload, "Macro behavior metadata missing from central image"
             print(side, "runtime macro assignment definition: PASS")
+        if "--pwm-led" in sys.argv:
+            assert (b"brightness_percent\0" in payload) == (side == "left"), (side, "LED setting metadata")
+            assert (b"cleave_led/saved\0" in payload) == (side == "right"), (side, "LED peripheral storage")
         marker = re.search(rb"CLEAVE_HHJP_UPDATE1\|" + side.upper().encode() + rb"\|([0-9a-f]{8})", payload)
         assert marker, (side, "update identity missing")
         identities[side] = marker[1].decode()

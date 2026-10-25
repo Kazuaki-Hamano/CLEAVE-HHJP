@@ -12,6 +12,7 @@ if(CONFIG_SHIELD_CLEAVE_HHJP_LEFT OR CONFIG_SHIELD_CLEAVE_HHJP_RIGHT)
   if(CONFIG_CLEAVE_INPUT_PINNACLE)
     target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/pinnacle/input_pinnacle.c)
   endif()
+  target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/status_led/brightness.c)
   target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/charge_status.c)
   target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/app_update.c)
   execute_process(COMMAND git -c safe.directory=${CMAKE_CURRENT_LIST_DIR} rev-parse HEAD

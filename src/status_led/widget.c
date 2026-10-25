@@ -4,6 +4,7 @@
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
+#include "brightness.h"
 
 #include <zmk/battery.h>
 #include <zmk/ble.h>
@@ -25,7 +26,7 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
-#define LED_GPIO_NODE_ID DT_COMPAT_GET_ANY_STATUS_OKAY(gpio_leds)
+#define LED_PWM_NODE_ID DT_NODELABEL(cleave_status_leds)
 
 BUILD_ASSERT(DT_NODE_EXISTS(DT_ALIAS(led_red)),
              "An alias for a red LED is not found for RGBLED_WIDGET");
@@ -38,11 +39,9 @@ BUILD_ASSERT(!(SHOW_LAYER_CHANGE && SHOW_LAYER_COLORS),
              "CONFIG_RGBLED_WIDGET_SHOW_LAYER_CHANGE and CONFIG_RGBLED_WIDGET_SHOW_LAYER_COLORS "
              "are mutually exclusive");
 
-// GPIO-based LED device and indices of red/green/blue LEDs inside its DT node
-static const struct device *led_dev = DEVICE_DT_GET(LED_GPIO_NODE_ID);
-static const uint8_t rgb_idx[] = {DT_NODE_CHILD_IDX(DT_ALIAS(led_red)),
-                                  DT_NODE_CHILD_IDX(DT_ALIAS(led_green)),
-                                  DT_NODE_CHILD_IDX(DT_ALIAS(led_blue))};
+/* R/G/B order matches cleave_hhjp_status_led.dtsi, all active-low. */
+static const struct device *led_dev = DEVICE_DT_GET(LED_PWM_NODE_ID);
+static const uint8_t rgb_idx[] = {0, 1, 2};
 
 // map from color values to names, for logging
 static const char *color_names[] = {"black", "red",     "green", "yellow",
@@ -98,29 +97,39 @@ BUILD_ASSERT(!(SHOW_LAYER_COLORS), "CLEAVE awake battery color replaces layer co
 
 // track current color for persistent indicators (layer color)
 uint8_t led_current_color = 0;
+static uint8_t led_current_brightness = 0;
 
 // low-level method to control the LED
-static void set_rgb_leds(uint8_t color, uint32_t duration_ms) {
+static void set_rgb_leds_level(uint8_t color, uint8_t brightness, uint32_t duration_ms) {
     k_mutex_lock(&led_output_lock, K_FOREVER);
     if (atomic_get(&sleeping)) {
         color = 0;
     }
-    for (uint8_t pos = 0; pos < 3; pos++) {
-        uint8_t bit = BIT(pos);
-        if ((bit & led_current_color) != (bit & color)) {
-            // bits are different, so we need to change one
-            if (bit & color) {
-                led_on(led_dev, rgb_idx[pos]);
-            } else {
-                led_off(led_dev, rgb_idx[pos]);
+    if (color != led_current_color || brightness != led_current_brightness) {
+        bool success = true;
+        for (uint8_t pos = 0; pos < 3; pos++) {
+            uint8_t level = color & BIT(pos) ? brightness : 0;
+            int ret = led_set_brightness(led_dev, rgb_idx[pos], level);
+            if (ret < 0) {
+                success = false;
+                LOG_WRN("LED PWM channel %u failed: %d", pos, ret);
             }
         }
+        /* A failed write must not suppress the next attempt. */
+        if (success) {
+            led_current_color = color;
+            led_current_brightness = brightness;
+        }
     }
-    led_current_color = color;
     k_mutex_unlock(&led_output_lock);
     if (duration_ms > 0) {
         k_sleep(K_MSEC(duration_ms));
     }
+}
+
+/* All notifications, including the two startup indications, retain full output. */
+static void set_rgb_leds(uint8_t color, uint32_t duration_ms) {
+    set_rgb_leds_level(color, 100, duration_ms);
 }
 
 // define message queue of blink work items, that will be processed by a
@@ -129,7 +138,7 @@ K_MSGQ_DEFINE(led_msgq, sizeof(struct blink_item), 16, 1);
 
 static uint8_t resting_color(void);
 
-static void refresh_resting_color(void) {
+void cleave_led_refresh(void) {
     /* A zero-duration queue item asks the sole blink thread to refresh.
      * If full, that thread will restore the latest color after pending blinks. */
     struct blink_item refresh = {0};
@@ -145,7 +154,7 @@ static int led_activity_listener_cb(const zmk_event_t *eh) {
         /* ACTIVE and IDLE both mean awake; wake must undo the sleep gate. */
         atomic_set(&sleeping, 0);
         if (initialized) {
-            refresh_resting_color();
+            cleave_led_refresh();
         }
     }
     return 0;
@@ -292,7 +301,7 @@ static int led_battery_listener_cb(const zmk_event_t *eh) {
         return 0;
     }
 
-    refresh_resting_color();
+    cleave_led_refresh();
 
     // check if we are in critical battery levels at state change, blink if we are
     uint8_t battery_level = as_zmk_battery_state_changed(eh)->state_of_charge;
@@ -414,10 +423,10 @@ static void process_blink(struct blink_item blink) {
         if (blink.color == resting_color() && blink.color > 0) {
             set_rgb_leds(0, CONFIG_RGBLED_WIDGET_INTERVAL_MS);
         }
-        set_rgb_leds(resting_color(),
+        set_rgb_leds_level(resting_color(), cleave_led_brightness_get(),
                      blink.sleep_ms > 0 ? blink.sleep_ms : CONFIG_RGBLED_WIDGET_INTERVAL_MS);
     } else {
-        set_rgb_leds(resting_color(), 0);
+        set_rgb_leds_level(resting_color(), cleave_led_brightness_get(), 0);
     }
 }
 
@@ -470,7 +479,7 @@ extern void led_init_thread(void *d0, void *d1, void *d2) {
 #endif // SHOW_LAYER_COLORS
 
     initialized = true;
-    refresh_resting_color();
+    cleave_led_refresh();
     LOG_INF("Finished initializing LED widget");
 }
 

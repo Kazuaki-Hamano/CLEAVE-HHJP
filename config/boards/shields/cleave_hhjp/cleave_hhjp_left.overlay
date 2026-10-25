@@ -4,6 +4,7 @@
  */
 
 #include "cleave_hhjp.dtsi"
+#include "cleave_hhjp_status_led.dtsi"
 #include "cleave_hhjp_trackpad.dtsi"
 #include "cleave_hhjp_trackpad_spi.dtsi"
 #include <input/processors.dtsi>

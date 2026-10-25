@@ -92,6 +92,8 @@ ID3/5は `[ID, version, side, flags, build8, CHHP, chipID8, reserved]`。sideは
 
 ## 起床状態のLED表示
 
-左右のRGB LEDはACTIVE・IDLE中、自分側の残量の色で点灯します。80%以上は緑、20〜79%は黄、20%未満は赤。起動時と同じ関数を使い、未取得／0%時のマゼンタも維持します。既存の通知表示後は残量の色へ戻り、SLEEPでは即時消灯します。追加のADC測定・周期タイマー・PWM調光はありません。
+左右のRGB LEDはACTIVE・IDLE中、自分側の残量の色で点灯します。80%以上は緑、20〜79%は黄、20%未満は赤。起動時と同じ関数を使い、未取得／0%時のマゼンタも維持します。既存の通知表示後は残量の色へ戻り、SLEEPでは即時消灯します。追加のADC測定はありません。常時点灯はPWM1の3チャンネル（赤P0.26・緑P0.30・青P0.06、1kHz、active-low）で調光し、DYAの `cleave_led.brightness_percent` を使います。起動と通知の表示は100%を維持します。CHG入力P0.17を指すボード標準PWM0と旧GPIO LEDドライバーは無効にします。
 
 固定LEDモジュールの `src/widget.c` だけをCMakeの遅延処理で `src/status_led/widget.c` に置換します。左右それぞれで元の翻訳単位が1個であることを要求し、settings_resetには適用しません。通知中のスリープに備え、GPIO書き込みの排他と消灯ゲートを設けています。[出典・変更点](../src/status_led/UPSTREAM.md)、[利用記録](../build-guide/customizations/system.md)を参照してください。実機の点灯・消灯と電池持ちは別途確認が必要です。
+
+`src/status_led/brightness.c` は左側でDYAカスタム設定（0〜100%、初期値100%）を公開します。左右へ現在値と保存値の組を送り、右側は現在値を表示へ適用し、保存値だけを `cleave_led/saved` に保存して応答します。左側の既存カスタム設定が保存値の基準で、再起動・再接続時に再送します。保留中だけ5秒間隔で再試行し、同じ保存値は重複書き込みしません。送受信・右側の保存はpeer work queueで行い、入力処理やsystem work queueでflashを待ちません。保存済みデータのACKだけで保留を解除し、古いACKは新しい変更を解除しません。

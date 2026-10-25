@@ -15,13 +15,20 @@ Local changes:
 - ACTIVE and IDLE both keep that color. SLEEP synchronously turns LEDs off before
   power management suspends devices; a sleep gate also suppresses queued blinks.
 - Refresh the resting color on battery events, without extra ADC sampling/timers.
-- Serialize GPIO writes with a mutex; never hold it during blink delays.
+- Replace GPIO on/off output with hardware PWM1 on R/G/B pins P0.26/P0.30/P0.06.
+  Disable the board's sample PWM0 on CHG P0.17 and the GPIO LED driver.
+- Serialize PWM writes with a mutex; never hold it during blink delays.
+- Notifications always use 100%; resting output reads the runtime brightness
+  setting even when its color did not change. The setting defaults to 100%.
+- brightness.c is local code: central DYA registration, preview/persist distinction,
+  peripheral fallback storage, and acknowledged/retried split synchronization.
 - Persistent layer colors are deliberately incompatible with this renderer.
 
 The upstream zero-percent/unknown convention (magenta) is preserved; measured
 80% and above is green, 20-79% yellow, and below 20% red. Battery estimates while
 USB-powered/charging retain their existing measurement limitations.
 
+`tools/dya-studio/test_led_settings.py` exercises registry and split synchronization.
 `tools/dya-studio/test_awake_led.py` compiles production renderer/state functions
 with deterministic GPIO, queue and activity mocks, including sleep during a
 blink and a saturated queue. Hardware behavior and battery life need evaluation

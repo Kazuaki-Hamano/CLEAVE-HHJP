@@ -36,6 +36,7 @@ stub = r"""
 #define CONFIG_RGBLED_WIDGET_SHOW_LAYER_COLORS 0
 #define CONFIG_ZMK_SPLIT 1
 #define SHOW_LAYER_COLORS (IS_ENABLED(CONFIG_RGBLED_WIDGET_SHOW_LAYER_COLORS)) && (!IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL))
+#define LOG_WRN(...)
 #define LOG_INF(...)
 #define LOG_BATTERY(...)
 #define BUILD_ASSERT(c,...) _Static_assert(c, "build assertion")
@@ -52,10 +53,13 @@ static void atomic_set(atomic_t *p, int v) {*p=v;}
 static void k_mutex_lock(int *p,int timeout) {assert(!*p);*p=1;}
 static void k_mutex_unlock(int *p) {assert(*p);*p=0;}
 static int gpio_color;
+static uint8_t levels[3], configured_brightness=100;
+static uint8_t cleave_led_brightness_get(void) {return configured_brightness;}
 static const void *led_dev;
 static const uint8_t rgb_idx[]={0,1,2};
-static int led_on(const void *dev,int index) {gpio_color |= BIT(index);return 0;}
-static int led_off(const void *dev,int index) {gpio_color &= ~BIT(index);return 0;}
+static int led_set_brightness(const void *dev,int index,uint8_t level) {
+ levels[index]=level;if(level)gpio_color |= BIT(index);else gpio_color &= ~BIT(index);return 0;
+}
 static void (*sleep_hook)(void);
 static void k_sleep(int ms) {if(sleep_hook){void (*f)(void)=sleep_hook;sleep_hook=NULL;f();}}
 static uint8_t battery=90;
@@ -79,18 +83,23 @@ static void drain(void) {
  while(led_msgq.used) {
   struct blink_item b;memcpy(&b,led_msgq.items[0],sizeof(b));
   memmove(led_msgq.items[0],led_msgq.items[1],--led_msgq.used*sizeof(b));
-  process_blink(b);assert(gpio_color==led_current_color);
+  process_blink(b);assert(gpio_color==(led_current_brightness ? led_current_color : 0));
  }
 }
 static void activity(int state) {struct zmk_activity_state_changed e={state};led_activity_listener_cb(&e);}
 static void change_battery(int level) {
  battery=level;struct zmk_battery_state_changed e={level};led_battery_listener_cb(&e);
 }
+static void check_notification_full_brightness(void) {assert(levels[2]==100);}
 static void sleep_during_blink(void) {activity(ZMK_ACTIVITY_SLEEP);assert(gpio_color==0);}
 int main(void) {
  /* Startup notifications work; steady illumination waits for initialization. */
+ configured_brightness=0;sleep_hook=check_notification_full_brightness;
  assert(resting_color()==0);process_blink((struct blink_item){.color=4,.duration_ms=100});assert(gpio_color==0);
- initialized=true;refresh_resting_color();drain();assert(gpio_color==2);
+ configured_brightness=100;initialized=true;cleave_led_refresh();drain();assert(gpio_color==2);
+ configured_brightness=10;cleave_led_refresh();drain();assert(levels[1]==10);
+ configured_brightness=0;cleave_led_refresh();drain();assert(gpio_color==0);
+ configured_brightness=100;cleave_led_refresh();drain();assert(levels[1]==100);
  activity(ZMK_ACTIVITY_IDLE);drain();assert(gpio_color==2);
  activity(ZMK_ACTIVITY_ACTIVE);drain();assert(gpio_color==2);
  change_battery(80);drain();assert(gpio_color==2);
@@ -100,7 +109,9 @@ int main(void) {
  change_battery(5);drain();assert(gpio_color==1);
  change_battery(0);drain();assert(gpio_color==5); /* upstream unknown/zero convention */
  change_battery(90);drain();assert(gpio_color==2);
- process_blink((struct blink_item){.color=4,.duration_ms=100});assert(gpio_color==2);
+ configured_brightness=10;cleave_led_refresh();drain();assert(levels[1]==10);
+ sleep_hook=check_notification_full_brightness;
+ process_blink((struct blink_item){.color=4,.duration_ms=100});assert(gpio_color==2);assert(levels[1]==10);
  sleep_hook=sleep_during_blink;
  process_blink((struct blink_item){.color=3,.duration_ms=100});assert(gpio_color==0);
  change_battery(30);drain();assert(gpio_color==0);

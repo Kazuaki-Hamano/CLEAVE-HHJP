@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: MIT */
+#include <zephyr/dt-bindings/pwm/pwm.h>
+
+/* Do not use the sample PWM0 on P0.17: that is the CHG input. */
+&pwm0 { status = "disabled"; };
+&{/pwmleds} { status = "disabled"; };
+&{/leds} { status = "disabled"; };
+
+&pinctrl {
+    status_pwm_default: status_pwm_default {
+        group1 {
+            psels = <NRF_PSEL(PWM_OUT0, 0, 26)>,
+                    <NRF_PSEL(PWM_OUT1, 0, 30)>,
+                    <NRF_PSEL(PWM_OUT2, 0, 6)>;
+            nordic,invert;
+        };
+    };
+    status_pwm_sleep: status_pwm_sleep {
+        group1 {
+            psels = <NRF_PSEL(PWM_OUT0, 0, 26)>,
+                    <NRF_PSEL(PWM_OUT1, 0, 30)>,
+                    <NRF_PSEL(PWM_OUT2, 0, 6)>;
+            low-power-enable;
+        };
+    };
+};
+&pwm1 {
+    status = "okay";
+    pinctrl-0 = <&status_pwm_default>;
+    pinctrl-1 = <&status_pwm_sleep>;
+    pinctrl-names = "default", "sleep";
+};
+/ {
+    cleave_status_leds: cleave_status_leds {
+        compatible = "pwm-leds";
+        status_red: red { pwms = <&pwm1 0 PWM_MSEC(1) PWM_POLARITY_INVERTED>; };
+        status_green: green { pwms = <&pwm1 1 PWM_MSEC(1) PWM_POLARITY_INVERTED>; };
+        status_blue: blue { pwms = <&pwm1 2 PWM_MSEC(1) PWM_POLARITY_INVERTED>; };
+    };
+};
