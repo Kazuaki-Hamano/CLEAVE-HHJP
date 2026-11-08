@@ -17,6 +17,7 @@ on:
       - feature/dya-layout-stagger
       - feature/dya-ble-discovery
       - fix/dya-ble-transport
+      - chore/elf-symbol-artifacts
     paths:
       - 'config/**'
       - 'src/**'
@@ -40,7 +41,9 @@ on:
       - 'CMakeLists.txt'
       - 'build.yaml'
       - '.github/workflows/build-firmware.yml'
+      - '.github/workflows/build-user-config.yml'
 
 jobs:
   build:
-    uses: cormoran/zmk/.github/workflows/build-user-config.yml@e5c9b6915b56801193e359dd9bad4a167ce0d1b8
+    # Local copy of cormoran/zmk build-user-config.yml@e5c9b691 plus a symbols artifact.
+    uses: ./.github/workflows/build-user-config.yml
