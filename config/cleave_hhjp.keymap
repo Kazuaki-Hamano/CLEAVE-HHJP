@@ -29,39 +29,81 @@
 			tapping-term-ms = <2000>;
 			bindings = <&bootloader>, <&kp>;
 		};
+		/* Release Ctrl on the current host before switching profiles,
+		 * otherwise the old host never sees the Ctrl release. */
+		bt_sel_rel0: bt_sel_release_ctrl_0 {
+			compatible = "zmk,behavior-macro";
+			#binding-cells = <0>;
+			display-name = "BT Select 1 (release Ctrl)";
+			wait-ms = <30>;
+			tap-ms = <30>;
+			bindings = <&macro_release &kp LCTRL>, <&macro_wait_time 50>, <&macro_tap &bt BT_SEL 0>;
+		};
+		bt_sel_rel1: bt_sel_release_ctrl_1 {
+			compatible = "zmk,behavior-macro";
+			#binding-cells = <0>;
+			display-name = "BT Select 2 (release Ctrl)";
+			wait-ms = <30>;
+			tap-ms = <30>;
+			bindings = <&macro_release &kp LCTRL>, <&macro_wait_time 50>, <&macro_tap &bt BT_SEL 1>;
+		};
+		bt_sel_rel2: bt_sel_release_ctrl_2 {
+			compatible = "zmk,behavior-macro";
+			#binding-cells = <0>;
+			display-name = "BT Select 3 (release Ctrl)";
+			wait-ms = <30>;
+			tap-ms = <30>;
+			bindings = <&macro_release &kp LCTRL>, <&macro_wait_time 50>, <&macro_tap &bt BT_SEL 2>;
+		};
+		bt_sel_rel3: bt_sel_release_ctrl_3 {
+			compatible = "zmk,behavior-macro";
+			#binding-cells = <0>;
+			display-name = "BT Select 4 (release Ctrl)";
+			wait-ms = <30>;
+			tap-ms = <30>;
+			bindings = <&macro_release &kp LCTRL>, <&macro_wait_time 50>, <&macro_tap &bt BT_SEL 3>;
+		};
+		bt_sel_rel4: bt_sel_release_ctrl_4 {
+			compatible = "zmk,behavior-macro";
+			#binding-cells = <0>;
+			display-name = "BT Select 5 (release Ctrl)";
+			wait-ms = <30>;
+			tap-ms = <30>;
+			bindings = <&macro_release &kp LCTRL>, <&macro_wait_time 50>, <&macro_tap &bt BT_SEL 4>;
+		};
 		bt1: bluetooth_morph_1 {
 			compatible = "zmk,behavior-mod-morph";
 			label = "BT_MORPH_1";
 			#binding-cells = <0>;
-			bindings = <&kp F1>, <&bt BT_SEL 0>;
+			bindings = <&kp F1>, <&bt_sel_rel0>;
 			mods = <(MOD_LCTL|MOD_RCTL)>;
 		};
 		bt2: bluetooth_morph_2 {
 			compatible = "zmk,behavior-mod-morph";
 			label = "BT_MORPH_2";
 			#binding-cells = <0>;
-			bindings = <&kp F2>, <&bt BT_SEL 1>;
+			bindings = <&kp F2>, <&bt_sel_rel1>;
 			mods = <(MOD_LCTL|MOD_RCTL)>;
 		};
 		bt3: bluetooth_morph_3 {
 			compatible = "zmk,behavior-mod-morph";
 			label = "BT_MORPH_3";
 			#binding-cells = <0>;
-			bindings = <&kp F3>, <&bt BT_SEL 2>;
+			bindings = <&kp F3>, <&bt_sel_rel2>;
 			mods = <(MOD_LCTL|MOD_RCTL)>;
 		};
 		bt4: bluetooth_morph_4 {
 			compatible = "zmk,behavior-mod-morph";
 			label = "BT_MORPH_4";
 			#binding-cells = <0>;
-			bindings = <&kp F4>, <&bt BT_SEL 3>;
+			bindings = <&kp F4>, <&bt_sel_rel3>;
 			mods = <(MOD_LCTL|MOD_RCTL)>;
 		};
 		bt5: bluetooth_morph_5 {
 			compatible = "zmk,behavior-mod-morph";
 			label = "BT_MORPH_5";
 			#binding-cells = <0>;
-			bindings = <&kp F5>, <&bt BT_SEL 4>;
+			bindings = <&kp F5>, <&bt_sel_rel4>;
 			mods = <(MOD_LCTL|MOD_RCTL)>;
 		};
 		btclr: bluetooth_clear_morph {
